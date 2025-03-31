@@ -29,7 +29,15 @@ venv\Scripts\activate
 ```sh
 source venv/bin/activate
 ```
+#### Store the Required .pkl Files
 
+Download or move the following .pkl files into backend/app/ml_model/:
+
+simi.pkl (Similarity matrix for movie recommendations)
+
+movie_dict.pkl (Preprocessed movie data dictionary)
+
+Ensure these files exist before running the backend.
 ### 📌 Install Dependencies
 ```sh
 pip install -r requirements.txt
