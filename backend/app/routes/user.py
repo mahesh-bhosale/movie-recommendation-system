@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
-import requests  # ✅ Added missing import
+import requests
 from app.database import get_db
 from app.auth import hash_password, verify_password, create_access_token 
 from app.models import User, Movie, History
@@ -12,9 +12,17 @@ from typing import List, Optional
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
+import os
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
-TMDB_API_KEY = "64172a9a636863a3103a08adbfb987b8" # Replace with actual API key
+# Get environment variables
+TMDB_API_KEY = os.getenv("TMDB_API_KEY")
+if not TMDB_API_KEY:
+    raise ValueError("TMDB_API_KEY environment variable is not set")
+
 # Create a password hashing context
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -367,3 +375,50 @@ def update_profile(
             "favorite_directors": user.favorite_directors
         }
     }
+
+# Search movies
+@router.get("/search/movie")
+async def search_movies(query: str):
+    try:
+        print(f"Searching for movies with query: {query}")  # Debug log
+        response = requests.get(
+            "https://api.themoviedb.org/3/search/movie",
+            params={
+                "api_key": TMDB_API_KEY,
+                "query": query,
+                "language": "en-US",
+                "page": 1
+            }
+        )
+        
+        if response.status_code != 200:
+            print(f"TMDB API Error: {response.status_code} - {response.text}")  # Debug log
+            raise HTTPException(status_code=response.status_code, detail="Failed to fetch movies from TMDB")
+            
+        return response.json()
+    except Exception as e:
+        print(f"Error in search_movies: {str(e)}")  # Debug log
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get popular movies
+@router.get("/movies/popular")
+async def get_popular_movies():
+    try:
+        print(f"Fetching popular movies with API key: {TMDB_API_KEY[:5]}...")  # Debug log
+        response = requests.get(
+            "https://api.themoviedb.org/3/movie/popular",
+            params={
+                "api_key": TMDB_API_KEY,
+                "language": "en-US",
+                "page": 1
+            }
+        )
+        
+        if response.status_code != 200:
+            print(f"TMDB API Error: {response.status_code} - {response.text}")  # Debug log
+            raise HTTPException(status_code=response.status_code, detail="Failed to fetch popular movies from TMDB")
+            
+        return response.json()
+    except Exception as e:
+        print(f"Error in get_popular_movies: {str(e)}")  # Debug log
+        raise HTTPException(status_code=500, detail=str(e))

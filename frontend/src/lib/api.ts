@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
-const TMDB_API_KEY = "64172a9a636863a3103a08adbfb987b8";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 // Register User
 export const registerUser = async (userData: {
@@ -44,26 +43,37 @@ export const loginUser = async (userData: { username: string; password: string }
 };
 
 // Fetch Recommendations with Full Movie Details
-export const getRecommendations = async (movie: string) => {
+export const getRecommendations = async (movie: string, token: string) => {
     try {
         const response = await axios.get(`${API_BASE_URL}/recommend/`, {
             params: { movie },
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
 
         const movieTitles = response.data.recommendations || [];
 
-        // Fetch movie details
+        // Fetch movie details from our backend
         const movieDetails = await Promise.all(
             movieTitles.map(async (title: string) => {
                 try {
                     const searchRes = await axios.get(
-                        `https://api.themoviedb.org/3/search/movie`,
+                        `${API_BASE_URL}/auth/search/movie`,
                         {
-                            params: { api_key: TMDB_API_KEY, query: title },
+                            params: { query: title },
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
                         }
                     );
 
-                    if (!searchRes.data.results.length) return null;
+                    if (!searchRes.data || !searchRes.data.results || !searchRes.data.results.length) {
+                        console.warn(`No results found for movie: ${title}`);
+                        return null;
+                    }
 
                     const movieData = searchRes.data.results[0];
 
@@ -76,7 +86,7 @@ export const getRecommendations = async (movie: string) => {
                         genre_ids: movieData.genre_ids,
                     };
                 } catch (err) {
-                    console.error("Error fetching movie details from TMDb:", err);
+                    console.error("Error fetching movie details:", err);
                     return null;
                 }
             })
@@ -90,11 +100,18 @@ export const getRecommendations = async (movie: string) => {
 };
 
 // Fetch Popular Movies
-export const getPopularMovies = async () => {
+export const getPopularMovies = async (token: string) => {
     try {
-        const response = await axios.get(`https://api.themoviedb.org/3/movie/popular`, {
-            params: { api_key: TMDB_API_KEY, language: "en-US", page: 1 },
+        const response = await axios.get(`${API_BASE_URL}/auth/movies/popular`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
         });
+
+        if (!response.data || !response.data.results) {
+            throw new Error('Invalid response format from popular movies endpoint');
+        }
 
         interface TMDBMovie {
             id: number;

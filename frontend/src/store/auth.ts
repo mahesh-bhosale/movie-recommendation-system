@@ -34,11 +34,12 @@ export const useAuthStore = create<AuthState>()(
           if (currentToken) {
             try {
               await axios.post(
-                'http://127.0.0.1:8000/logout',
+                `${process.env.NEXT_PUBLIC_API_URL}/logout`,
                 {},
                 {
                   headers: {
-                    Authorization: `Bearer ${currentToken}`
+                    'Authorization': `Bearer ${currentToken}`,
+                    'Content-Type': 'application/json'
                   }
                 }
               );

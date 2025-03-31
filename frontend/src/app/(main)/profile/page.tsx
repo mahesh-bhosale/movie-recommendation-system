@@ -34,7 +34,7 @@ export default function ProfilePage() {
                 setError(null);
 
                 const response = await axios.get(
-                    'http://127.0.0.1:8000/auth/profile',
+                    `${process.env.NEXT_PUBLIC_API_URL}/auth/profile`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,

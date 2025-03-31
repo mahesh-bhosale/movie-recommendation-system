@@ -22,13 +22,16 @@ export default function MovieCard({ movie, onClick }: MovieCardProps) {
     const handleClick = async () => {
         try {
             // Add to history
-            await axios.post('http://127.0.0.1:8000/auth/history', 
-                { tmdb_movie_id: movie.id },
-                { 
-                    headers: { 
-                        Authorization: `Bearer ${token}`,
+            await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
+                {
+                    tmdb_movie_id: movie.id
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    } 
+                    }
                 }
             );
         } catch (error) {

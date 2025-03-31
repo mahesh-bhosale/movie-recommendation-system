@@ -48,8 +48,8 @@ export default function HistoryPage() {
 
                 // Fetch user's history
                 console.log('Fetching user history...');
-                const historyResponse = await axios.get<HistoryItem[]>(
-                    'http://127.0.0.1:8000/auth/history',
+                const response = await axios.get(
+                    `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -58,23 +58,23 @@ export default function HistoryPage() {
                     }
                 );
 
-                console.log('History response:', historyResponse.data);
+                console.log('History response:', response.data);
 
-                if (!historyResponse.data || !Array.isArray(historyResponse.data)) {
-                    console.error('Invalid history response format:', historyResponse.data);
+                if (!response.data || !Array.isArray(response.data)) {
+                    console.error('Invalid history response format:', response.data);
                     setError('Invalid history data received from server');
                     setHistory([]);
                     return;
                 }
 
-                if (historyResponse.data.length === 0) {
+                if (response.data.length === 0) {
                     console.log('No history items found');
                     setHistory([]);
                     return;
                 }
 
                 // Convert history items directly to movies
-                const movies: Movie[] = historyResponse.data.map(item => ({
+                const movies: Movie[] = response.data.map(item => ({
                     id: item.id,
                     title: item.title,
                     overview: '', // We don't have this in the history response

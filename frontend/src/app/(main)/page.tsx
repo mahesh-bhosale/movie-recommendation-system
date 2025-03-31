@@ -49,14 +49,26 @@ export default function HomePage() {
                 setLoading(true);
                 setError(null);
 
-                // Fetch popular movies from TMDB first
+                // Fetch popular movies from our backend API
                 const popularResponse = await axios.get(
-                    'https://api.themoviedb.org/3/movie/popular?api_key=64172a9a636863a3103a08adbfb987b8&language=en-US&page=1'
+                    `${process.env.NEXT_PUBLIC_API_URL}/auth/movies/popular`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
                 );
+
+                if (!popularResponse.data || !popularResponse.data.results) {
+                    throw new Error('Invalid response format from popular movies endpoint');
+                }
+
+                setPopularMovies(popularResponse.data.results || []);
 
                 // Fetch user's history to get recommendations
                 const historyResponse = await axios.get(
-                    'http://127.0.0.1:8000/auth/history',
+                    `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -69,7 +81,7 @@ export default function HomePage() {
                 if (historyResponse.data && historyResponse.data.length > 0) {
                     try {
                         const recommendedResponse = await axios.get(
-                            'http://127.0.0.1:8000/auth/recommendations',
+                            `${process.env.NEXT_PUBLIC_API_URL}/auth/recommendations`,
                             {
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
@@ -80,14 +92,13 @@ export default function HomePage() {
                         setRecommendedMovies(recommendedResponse.data.recommendations || []);
                     } catch (recommendError) {
                         console.warn('Failed to fetch recommendations:', recommendError);
-                        // Don't set error state for recommendation failure
                     }
                 }
 
                 // Fetch favorite genres
                 try {
                     const genresResponse = await axios.get(
-                        'http://127.0.0.1:8000/auth/favorites/genres',
+                        `${process.env.NEXT_PUBLIC_API_URL}/auth/favorites/genres`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -108,7 +119,7 @@ export default function HomePage() {
                 // Fetch favorite actors
                 try {
                     const actorsResponse = await axios.get(
-                        'http://127.0.0.1:8000/auth/favorites/actors',
+                        `${process.env.NEXT_PUBLIC_API_URL}/auth/favorites/actors`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -120,7 +131,7 @@ export default function HomePage() {
                     const actors = (actorsResponse.data || []).map((name: string, index: number) => ({
                         id: index + 1,
                         name: name,
-                        profile_path: '/default-profile.jpg' // Use a default profile image
+                        profile_path: '/default-profile.jpg'
                     }));
                     setFavoriteActors(actors);
                 } catch (actorsError) {
@@ -130,7 +141,7 @@ export default function HomePage() {
                 // Fetch favorite directors
                 try {
                     const directorsResponse = await axios.get(
-                        'http://127.0.0.1:8000/auth/favorites/directors',
+                        `${process.env.NEXT_PUBLIC_API_URL}/auth/favorites/directors`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -142,14 +153,12 @@ export default function HomePage() {
                     const directors = (directorsResponse.data || []).map((name: string, index: number) => ({
                         id: index + 1,
                         name: name,
-                        profile_path: '/default-profile.jpg' // Use a default profile image
+                        profile_path: '/default-profile.jpg'
                     }));
                     setFavoriteDirectors(directors);
                 } catch (directorsError) {
                     console.warn('Failed to fetch favorite directors:', directorsError);
                 }
-
-                setPopularMovies(popularResponse.data.results || []);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 if (axios.isAxiosError(error)) {

@@ -39,7 +39,7 @@ export default function SearchPage() {
 
             console.log('Adding movie to history:', movie.title);
             await axios.post(
-                'http://127.0.0.1:8000/auth/history',
+                `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
                 {
                     tmdb_movie_id: movie.id
                 },
@@ -71,7 +71,7 @@ export default function SearchPage() {
 
             console.log('Fetching recommendations for:', searchQuery);
             const recommendationsResponse = await axios.get(
-                `http://127.0.0.1:8000/recommend/?movie=${encodeURIComponent(searchQuery)}`,
+                `${process.env.NEXT_PUBLIC_API_URL}/recommend/?movie=${encodeURIComponent(searchQuery)}`,
                 {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -83,8 +83,19 @@ export default function SearchPage() {
             if (recommendationsResponse.data.recommendations) {
                 // First, add the searched movie to history
                 const searchedMovieResponse = await axios.get(
-                    `https://api.themoviedb.org/3/search/movie?api_key=64172a9a636863a3103a08adbfb987b8&query=${encodeURIComponent(searchQuery)}&language=en-US&page=1`
+                    `${process.env.NEXT_PUBLIC_API_URL}/auth/search/movie`,
+                    {
+                        params: { query: searchQuery },
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
                 );
+
+                if (!searchedMovieResponse.data || !searchedMovieResponse.data.results) {
+                    throw new Error('Invalid response format from search endpoint');
+                }
 
                 if (searchedMovieResponse.data.results[0]) {
                     const searchedMovie = searchedMovieResponse.data.results[0];
@@ -100,7 +111,14 @@ export default function SearchPage() {
                 const moviePromises = recommendationsResponse.data.recommendations.map(async (title: string) => {
                     try {
                         const movieResponse = await axios.get(
-                            `https://api.themoviedb.org/3/search/movie?api_key=64172a9a636863a3103a08adbfb987b8&query=${encodeURIComponent(title)}&language=en-US&page=1`
+                            `${process.env.NEXT_PUBLIC_API_URL}/auth/search/movie`,
+                            {
+                                params: { query: title },
+                                headers: {
+                                    'Authorization': `Bearer ${token}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            }
                         );
                         const movie = movieResponse.data.results[0];
                         if (movie) {
