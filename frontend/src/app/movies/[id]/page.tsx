@@ -94,8 +94,10 @@ export default function MovieDetailsPage() {
                     `https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&append_to_response=credits,videos,production_companies`
                 );
                 setMovie(response.data);
-                if (isAuthenticated) {
-                    storeMovieHistory(Number(id));
+                if (isAuthenticated && response.data?.title) {
+                    await storeMovieHistory(Number(id));
+                    // Only get recommendations if we have the movie title
+                    await handleGetRecommendations();
                 }
             } catch (err) {
                 console.error('Error fetching movie details:', err);
@@ -115,11 +117,15 @@ export default function MovieDetailsPage() {
         }
     
         try {
+            setIsLoading(true);
+            setError(null);
             const token = localStorage.getItem('token');
             if (!token) throw new Error('No authentication token found');
             
+            // Wait for movie data to be available
             if (!movie?.title) {
-                throw new Error('Movie title not available');
+                console.log('Waiting for movie data...');
+                return;
             }
     
             // First store in history
@@ -127,10 +133,10 @@ export default function MovieDetailsPage() {
     
             // Then get recommendations
             const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/recommend`, // Remove trailing slash
+                `${process.env.NEXT_PUBLIC_API_URL}/recommend/`,
                 {
                     params: { 
-                        movie: (movie.title).trim() 
+                        movie: movie.title.trim() 
                     },
                     headers: { 
                         Authorization: `Bearer ${token}`,
@@ -140,18 +146,53 @@ export default function MovieDetailsPage() {
             );
     
             if (response.data?.recommendations) {
-                setRecommendations(response.data.recommendations);
-                setError(null);
+                // Fetch full movie details for each recommendation
+                const fullRecommendations = await Promise.all(
+                    response.data.recommendations.map(async (movieTitle: string) => {
+                        try {
+                            const tmdbResponse = await axios.get(
+                                `https://api.themoviedb.org/3/search/movie?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&query=${encodeURIComponent(movieTitle)}&page=1`
+                            );
+                            
+                            // Get the first matching movie
+                            const movie = tmdbResponse.data.results[0];
+                            if (movie) {
+                                return {
+                                    id: movie.id,
+                                    title: movie.title,
+                                    poster_path: movie.poster_path,
+                                    vote_average: movie.vote_average
+                                };
+                            }
+                            return null;
+                        } catch (err) {
+                            console.error(`Error fetching details for ${movieTitle}:`, err);
+                            return null;
+                        }
+                    })
+                );
+
+                // Filter out any null results and set the recommendations
+                setRecommendations(fullRecommendations.filter((rec): rec is Recommendation => rec !== null));
             } else {
-                setError('No recommendations available for this movie');
+                setError('No recommendations available for this movie. Try another movie.');
             }
         } catch (err) {
             console.error('Recommendation error:', err);
             if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || 'Failed to get recommendations');
+                if (err.response?.status === 404) {
+                    setError('This movie is not in our recommendation database. Try another movie.');
+                } else if (err.response?.status === 401) {
+                    setError('Your session has expired. Please log in again.');
+                    router.push('/login');
+                } else {
+                    setError(err.response?.data?.detail || 'Failed to get recommendations. Please try another movie.');
+                }
             } else {
-                setError('Failed to get recommendations. Please try again later.');
+                setError('Failed to get recommendations. Please try another movie.');
             }
+        } finally {
+            setIsLoading(false);
         }
     };
     
@@ -261,13 +302,13 @@ export default function MovieDetailsPage() {
                             <div>
                                 <h3 className="text-lg font-semibold mb-2">Movie Info</h3>
                                 <div className="space-y-2 text-gray-300">
-                                    <p><span className="font-medium">Status:</span> {movie.status}</p>
-                                    <p><span className="font-medium">Release Date:</span> {new Date(movie.release_date).toLocaleDateString()}</p>
-                                    <p><span className="font-medium">Runtime:</span> {movie.runtime} minutes</p>
-                                    <p><span className="font-medium">Budget:</span> ${movie.budget?.toLocaleString() || 'N/A'}</p>
-                                    <p><span className="font-medium">Revenue:</span> ${movie.revenue?.toLocaleString() || 'N/A'}</p>
-                                    <p><span className="font-medium">Language:</span> {movie.original_language.toUpperCase()}</p>
-                                    <p><span className="font-medium">Popularity:</span> {movie.popularity.toFixed(1)}</p>
+                                    <p key="status"><span className="font-medium">Status:</span> {movie.status}</p>
+                                    <p key="release"><span className="font-medium">Release Date:</span> {new Date(movie.release_date).toLocaleDateString()}</p>
+                                    <p key="runtime"><span className="font-medium">Runtime:</span> {movie.runtime} minutes</p>
+                                    <p key="budget"><span className="font-medium">Budget:</span> ${movie.budget?.toLocaleString() || 'N/A'}</p>
+                                    <p key="revenue"><span className="font-medium">Revenue:</span> ${movie.revenue?.toLocaleString() || 'N/A'}</p>
+                                    <p key="language"><span className="font-medium">Language:</span> {movie.original_language.toUpperCase()}</p>
+                                    <p key="popularity"><span className="font-medium">Popularity:</span> {movie.popularity.toFixed(1)}</p>
                                 </div>
                             </div>
                             <div>
@@ -322,11 +363,22 @@ export default function MovieDetailsPage() {
                             <div className="flex flex-col gap-4">
                                 <button
                                     onClick={handleGetRecommendations}
-                                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none flex items-center gap-2"
+                                    disabled={isLoading}
+                                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none flex items-center gap-2 disabled:opacity-50"
                                 >
                                     <span>🎯</span> Get Recommendations Based on This Movie
                                 </button>
-                                {error && <p className="text-red-500">{error}</p>}
+                                {error && (
+                                    <div className="p-4 bg-red-900/50 border border-red-500 rounded-lg">
+                                        <p className="text-red-500">{error}</p>
+                                    </div>
+                                )}
+                                {isLoading && (
+                                    <div className="text-center py-4">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-500 mx-auto mb-2"></div>
+                                        <p className="text-gray-400">Getting recommendations...</p>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -336,10 +388,12 @@ export default function MovieDetailsPage() {
                 {recommendations.length > 0 && (
                     <div className="mt-12">
                         <h2 className="text-2xl font-bold mb-6">Recommended Movies</h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                            {recommendations.map((rec) => (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                            {recommendations
+                                .filter(rec => rec && rec.id)
+                                .map((rec) => (
                                 <div
-                                    key={rec.id}
+                                    key={`rec-${rec.id}`}
                                     className="relative aspect-[2/3] rounded-lg overflow-hidden group cursor-pointer"
                                     onClick={async () => {
                                         if (isAuthenticated) await storeMovieHistory(rec.id);
@@ -348,7 +402,7 @@ export default function MovieDetailsPage() {
                                 >
                                     <Image
                                         src={`https://image.tmdb.org/t/p/w500${rec.poster_path}`}
-                                        alt={rec.title}
+                                        alt={`Movie poster for ${rec.title}`}
                                         fill
                                         className="object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
@@ -356,9 +410,8 @@ export default function MovieDetailsPage() {
                                         <div className="absolute bottom-0 left-0 right-0 p-4">
                                             <h3 className="text-lg font-semibold mb-2">{rec.title}</h3>
                                             <p className="text-sm text-yellow-400">
-    Rating: {rec.vote_average ? rec.vote_average.toFixed(1) : 'N/A'} / 10
-</p>
-
+                                                Rating: {rec.vote_average ? rec.vote_average.toFixed(1) : 'N/A'} / 10
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
