@@ -32,6 +32,7 @@ interface MovieDetails {
             published_at: string;
         }>;
     };
+    userRating?: number;
 }
 
 interface Recommendation {
@@ -40,6 +41,69 @@ interface Recommendation {
     poster_path: string;
     vote_average: number;
 }
+
+const RatingComponent = ({ 
+    isAuthenticated, 
+    userRating, 
+    isRating, 
+    ratingError, 
+    onRateMovie, 
+    onLogin 
+}: { 
+    isAuthenticated: boolean;
+    userRating: number | null;
+    isRating: boolean;
+    ratingError: string | null;
+    onRateMovie: (rating: number) => void;
+    onLogin: () => void;
+}) => {
+    if (!isAuthenticated) {
+        return (
+            <div className="mb-6">
+                <p className="text-gray-300 mb-2">Please log in to rate this movie.</p>
+                <button
+                    onClick={onLogin}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none"
+                >
+                    Log In
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-2">Rate this Movie</h3>
+            <div className="flex items-center gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                        key={star}
+                        onClick={() => onRateMovie(star)}
+                        disabled={isRating}
+                        className={`text-2xl focus:outline-none transition-colors ${
+                            userRating && star <= userRating
+                                ? 'text-yellow-400'
+                                : 'text-gray-400 hover:text-yellow-400'
+                        }`}
+                    >
+                        ★
+                    </button>
+                ))}
+                {userRating && (
+                    <span className="ml-2 text-gray-300">
+                        You rated {userRating} stars
+                    </span>
+                )}
+            </div>
+            {ratingError && (
+                <p className="mt-2 text-red-500 text-sm">{ratingError}</p>
+            )}
+            {isRating && (
+                <p className="mt-2 text-gray-400 text-sm">Rating...</p>
+            )}
+        </div>
+    );
+};
 
 export default function MovieDetailsPage() {
     const { id } = useParams();
@@ -50,6 +114,9 @@ export default function MovieDetailsPage() {
     const [error, setError] = useState<string | null>(null);
     const [showTrailer, setShowTrailer] = useState(false);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [userRating, setUserRating] = useState<number | null>(null);
+    const [isRating, setIsRating] = useState(false);
+    const [ratingError, setRatingError] = useState<string | null>(null);
 
     const storeMovieHistory = async (tmdbId: number) => {
     if (!isAuthenticated) return;
@@ -203,6 +270,73 @@ export default function MovieDetailsPage() {
         );
     };
 
+    const fetchUserRating = async () => {
+        if (!isAuthenticated) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/auth/movies/${id}/rating`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data?.rating !== null) {
+                setUserRating(response.data.rating);
+            }
+        } catch (err) {
+            console.error('Error fetching user rating:', err);
+        }
+    };
+
+    const handleRateMovie = async (rating: number) => {
+        if (!isAuthenticated) {
+            router.push('/login');
+            return;
+        }
+
+        try {
+            setIsRating(true);
+            setRatingError(null);
+            const token = localStorage.getItem('token');
+            if (!token) throw new Error('No authentication token found');
+
+            await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/auth/movies/${id}/rate`,
+                { rating },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            setUserRating(rating);
+        } catch (err) {
+            console.error('Error rating movie:', err);
+            if (axios.isAxiosError(err)) {
+                setRatingError(err.response?.data?.detail || 'Failed to rate movie');
+            } else {
+                setRatingError('Failed to rate movie');
+            }
+        } finally {
+            setIsRating(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchUserRating();
+        }
+    }, [id, isAuthenticated]);
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -295,6 +429,14 @@ export default function MovieDetailsPage() {
 
                     {/* Movie Details */}
                     <div className="md:col-span-2">
+                        <RatingComponent 
+                            isAuthenticated={isAuthenticated}
+                            userRating={userRating}
+                            isRating={isRating}
+                            ratingError={ratingError}
+                            onRateMovie={handleRateMovie}
+                            onLogin={() => router.push('/login')}
+                        />
                         <h2 className="text-2xl font-bold mb-4">Overview</h2>
                         <p className="text-gray-300 mb-6">{movie.overview}</p>
 

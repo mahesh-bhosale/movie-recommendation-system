@@ -4,7 +4,7 @@ from pydantic import BaseModel, EmailStr
 import requests
 from app.database import get_db
 from app.auth import hash_password, verify_password, create_access_token 
-from app.models import User, Movie, History
+from app.models import User, Movie, History, Rating
 from passlib.context import CryptContext
 from app.schemas import HistoryResponse
 from app.dependencies import get_current_user
@@ -40,6 +40,9 @@ class UserCreate(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class RatingRequest(BaseModel):
+    rating: float
 
 # ✅ Register Route
 @router.post("/register")
@@ -421,4 +424,84 @@ async def get_popular_movies():
         return response.json()
     except Exception as e:
         print(f"Error in get_popular_movies: {str(e)}")  # Debug log
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Add rating for a movie
+@router.post("/movies/{tmdb_id}/rate")
+async def rate_movie(
+    tmdb_id: int,
+    rating_request: RatingRequest,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        rating = rating_request.rating
+        # Validate rating
+        if not (0 <= rating <= 5):
+            raise HTTPException(status_code=400, detail="Rating must be between 0 and 5")
+
+        # Check if movie exists in our database
+        movie = db.query(Movie).filter(Movie.tmdb_id == tmdb_id).first()
+        if not movie:
+            # Fetch movie details from TMDB
+            response = requests.get(
+                f"https://api.themoviedb.org/3/movie/{tmdb_id}?api_key={TMDB_API_KEY}"
+            )
+            if response.status_code != 200:
+                raise HTTPException(status_code=404, detail="Movie not found")
+            
+            movie_data = response.json()
+            movie = Movie(
+                tmdb_id=tmdb_id,
+                title=movie_data["title"],
+                overview=movie_data.get("overview", "")
+            )
+            db.add(movie)
+            db.commit()
+            db.refresh(movie)
+
+        # Check if user has already rated this movie
+        existing_rating = db.query(Rating).filter(
+            Rating.user_id == user.id,
+            Rating.tmdb_id == tmdb_id
+        ).first()
+
+        if existing_rating:
+            # Update existing rating
+            existing_rating.rating = rating
+        else:
+            # Create new rating
+            new_rating = Rating(
+                user_id=user.id,
+                tmdb_id=tmdb_id,
+                rating=rating
+            )
+            db.add(new_rating)
+
+        db.commit()
+        return {"message": "Rating added successfully", "rating": rating}
+
+    except Exception as e:
+        print(f"Error in rate_movie: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Get user's rating for a movie
+@router.get("/movies/{tmdb_id}/rating")
+async def get_movie_rating(
+    tmdb_id: int,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    try:
+        rating = db.query(Rating).filter(
+            Rating.user_id == user.id,
+            Rating.tmdb_id == tmdb_id
+        ).first()
+
+        if rating:
+            return {"rating": rating.rating}
+        return {"rating": None}
+
+    except Exception as e:
+        print(f"Error in get_movie_rating: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
