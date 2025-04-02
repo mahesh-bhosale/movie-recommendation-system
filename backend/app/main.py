@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # Import CORS
-from app.routes import user, recommend
+from app.routes import user, recommend, hybrid
+# from app.hybrid import router as hybrid_router  # Import hybrid router
 import uvicorn
 
 app = FastAPI(title="Movie Recommendation System")
@@ -17,6 +18,7 @@ app.add_middleware(
 # Include routes
 app.include_router(user.router, prefix="/auth", tags=["Auth"])
 app.include_router(recommend.router, prefix="/recommend", tags=["Recommendation"])
+app.include_router(hybrid.router, prefix="/hybrid", tags=["Hybrid"])  # Add hybrid router
 
 @app.get("/")
 def root():

@@ -1,49 +1,12 @@
-import { useState } from 'react';
-import axios from 'axios';
-import { useAuthStore } from '@/store/auth';
-
-interface Movie {
-    id: number;
-    title: string;
-    overview: string;
-    poster_path: string;
-    vote_average: number;
-}
+import Link from 'next/link';
 
 interface MovieCardProps {
     movie: Movie;
-    onClick?: () => void;
 }
 
-export default function MovieCard({ movie, onClick }: MovieCardProps) {
-    const [isHovered, setIsHovered] = useState(false);
-    const token = useAuthStore(state => state.token);
-
-    const handleClick = async () => {
-        try {
-            // Add to history
-            await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
-                {
-                    tmdb_movie_id: movie.id
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-        } catch (error) {
-            console.error('Error adding to history:', error);
-        }
-    };
-
+export default function MovieCard({ movie }: MovieCardProps) {
     return (
-        <div
-            className="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-            onClick={onClick || handleClick}
-        >
+        <Link href={`/movies/${movie.id}`} className="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer">
             <div className="relative pb-[150%]">
                 <img
                     src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : '/no-poster.png'}
@@ -61,6 +24,6 @@ export default function MovieCard({ movie, onClick }: MovieCardProps) {
                     <span className="ml-1 text-gray-400">{movie.vote_average.toFixed(1)}</span>
                 </div>
             </div>
-        </div>
+        </Link>
     );
-} 
+}

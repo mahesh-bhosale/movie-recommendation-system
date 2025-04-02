@@ -1,39 +1,60 @@
-import pickle
-import pandas as pd
+# from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, ARRAY, UniqueConstraint, func
+# from sqlalchemy.orm import relationship
+# from app.database import Base
 
-# Load the ML model files
-movie_dict = pickle.load(open("app/ml_model/movie_dict.pkl", "rb"))
-simi = pickle.load(open("app/ml_model/simi.pkl", "rb"))
+# class User(Base):
+#     __tablename__ = "users"
+    
+#     id = Column(Integer, primary_key=True, index=True)
+#     username = Column(String, unique=True, index=True, nullable=False)
+#     email = Column(String, unique=True, index=True, nullable=False)
+#     password = Column(String, nullable=False)
+#     favorite_genres = Column(ARRAY(String), nullable=True)  # Store genres as an array
+#     favorite_actors = Column(ARRAY(String), nullable=True)
+#     favorite_directors = Column(ARRAY(String), nullable=True)
 
-movies = pd.DataFrame(movie_dict)
+#     # Relationships
+#     history = relationship("History", back_populates="user", cascade="all, delete-orphan")
+#     ratings = relationship("Rating", back_populates="user", cascade="all, delete")  # ✅ Added missing relationship
 
-# ✅ Standard Recommendation (Based on a Movie Name)
-def recommend(movie_name: str):
-    if movie_name not in movies["title"].values:
-        return []
 
-    index = movies[movies["title"] == movie_name].index[0]
-    distances = sorted(list(enumerate(simi[index])), reverse=True, key=lambda x: x[1])
+# class Movie(Base):
+#     __tablename__ = "movies"
 
-    recommended_movies = []
-    for i in distances[1:6]:  # Top 5 recommendations
-        recommended_movies.append(movies.iloc[i[0]].title)
+#     id = Column(Integer, primary_key=True, index=True)
+#     tmdb_id = Column(Integer, unique=True, nullable=False)  # ✅ Added missing tmdb_id column
+#     title = Column(String, index=True, nullable=False)
+#     overview = Column(String, nullable=True)
 
-    return recommended_movies
+#     # Relationships
+#     history = relationship("History", back_populates="movie", cascade="all, delete-orphan")
+#     ratings = relationship("Rating", back_populates="movie", cascade="all, delete")  # ✅ Added missing relationship
 
-# ✅ Cold Start Recommendation (Based on User Preferences)
-def recommend_by_preferences(user):
-    filtered_movies = movies
 
-    if user.favorite_genres:
-        filtered_movies = filtered_movies[filtered_movies["genres"].apply(lambda x: any(g in x for g in user.favorite_genres))]
+# class Rating(Base):
+#     __tablename__ = "ratings"
 
-    if user.favorite_actors:
-        filtered_movies = filtered_movies[filtered_movies["actors"].apply(lambda x: any(a in x for a in user.favorite_actors))]
+#     id = Column(Integer, primary_key=True, index=True)
+#     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+#     tmdb_id = Column(Integer, ForeignKey("movies.tmdb_id", ondelete="CASCADE"), nullable=False)
+#     rating = Column(Float, nullable=False)  # Rating value (e.g., 1.0 - 5.0)
 
-    if user.favorite_directors:
-        filtered_movies = filtered_movies[filtered_movies["directors"].apply(lambda x: any(d in x for d in user.favorite_directors))]
+#     # Enforce that a user can only rate a movie once
+#     __table_args__ = (UniqueConstraint("user_id", "tmdb_id", name="unique_user_movie_rating"),)
 
-    recommended_movies = filtered_movies.sample(n=5)["title"].tolist() if not filtered_movies.empty else []
+#     # Relationships
+#     user = relationship("User", back_populates="ratings")
+#     movie = relationship("Movie", back_populates="ratings")
 
-    return recommended_movies
+
+# class History(Base):
+#     __tablename__ = "history"
+
+#     id = Column(Integer, primary_key=True, index=True)
+#     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+#     movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=True)  # ✅ Fixed: ForeignKey linking to movies.id
+#     title = Column(String, nullable=False)  # Ensure title is not NULL
+#     timestamp = Column(DateTime, default=func.now())
+
+#     user = relationship("User", back_populates="history")
+#     movie = relationship("Movie", back_populates="history", lazy="joined")

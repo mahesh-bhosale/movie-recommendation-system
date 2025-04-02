@@ -69,16 +69,15 @@ export default function SearchPage() {
             setError(null);
             setRecommendations([]); // Clear previous recommendations
 
-            console.log('Fetching recommendations for:', searchQuery);
             const recommendationsResponse = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/recommend/?movie=${encodeURIComponent(searchQuery)}`,
+                `${process.env.NEXT_PUBLIC_API_URL}/recommend/`,
                 {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+                  params: { movie: searchQuery }, // Axios will properly encode the query
+                  headers: {
+                    Authorization: `Bearer ${token}`
+                  }
                 }
-            );
+              );
 
             if (recommendationsResponse.data.recommendations) {
                 // First, add the searched movie to history
@@ -114,10 +113,10 @@ export default function SearchPage() {
                             `${process.env.NEXT_PUBLIC_API_URL}/auth/search/movie`,
                             {
                                 params: { query: title },
-                                headers: {
-                                    'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/json'
-                                }
+                                // headers: {
+                                //     'Authorization': `Bearer ${token}`,
+                                //     'Content-Type': 'application/json'
+                                // }
                             }
                         );
                         const movie = movieResponse.data.results[0];
@@ -209,11 +208,11 @@ export default function SearchPage() {
                     <section>
                         <h2 className="text-2xl font-semibold mb-6">Recommendations</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      
                             {recommendations.map((movie) => (
                                 <MovieCard 
                                     key={movie.id}
                                     movie={movie}
-                                    onClick={() => addToHistory(movie)}
                                 />
                             ))}
                         </div>
