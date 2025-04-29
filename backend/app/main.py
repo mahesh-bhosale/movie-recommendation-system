@@ -24,12 +24,7 @@ logger.info(f"Python version: {sys.version}")
 logger.info(f"Current working directory: {os.getcwd()}")
 logger.info(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
 
-app = FastAPI(
-    title="Movie Recommendation System",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
-)
+app = FastAPI(title="Movie Recommendation System")
 
 # Add CORS
 app.add_middleware(
@@ -37,8 +32,7 @@ app.add_middleware(
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]
+    allow_headers=["*"]
 )
 
 # Register routes
@@ -69,5 +63,4 @@ async def global_exception_handler(request, exc):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    host = os.environ.get("HOST", "0.0.0.0")
-    uvicorn.run("app.main:app", host=host, port=port, workers=1)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port)
