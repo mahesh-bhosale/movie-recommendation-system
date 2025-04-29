@@ -6,7 +6,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PORT=8000 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    LOG_LEVEL=debug
 
 # Set work directory
 WORKDIR /app
@@ -44,17 +45,22 @@ RUN mkdir -p /app/app/ml_model
 # Set permissions
 RUN chmod -R 755 /app
 
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "Starting application setup..."\n\
+echo "Current directory: $(pwd)"\n\
+echo "Listing directory contents:"\n\
+ls -la\n\
+echo "Starting database migrations..."\n\
+alembic upgrade head\n\
+echo "Database migrations completed"\n\
+echo "Starting application..."\n\
+uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --log-level ${LOG_LEVEL} --reload\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
-
-# Create startup script
-RUN echo '#!/bin/bash\n\
-echo "Starting database migrations..."\n\
-alembic upgrade head\n\
-echo "Starting application..."\n\
-uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --log-level debug\n\
-' > /app/start.sh && chmod +x /app/start.sh
 
 # Command to run the application
 CMD ["/app/start.sh"]
