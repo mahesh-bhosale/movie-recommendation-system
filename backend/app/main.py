@@ -25,6 +25,15 @@ logger.info(f"Python version: {sys.version}")
 logger.info(f"Current working directory: {os.getcwd()}")
 logger.info(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
 
+# Download models before starting the application
+try:
+    logger.info("Downloading model files...")
+    app.download_models.download_models()
+    logger.info("Model files downloaded successfully")
+except Exception as e:
+    logger.error(f"Failed to download model files: {str(e)}")
+    raise
+
 app = FastAPI(title="Movie Recommendation System")
 
 # Add CORS

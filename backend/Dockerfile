@@ -42,6 +42,9 @@ COPY . .
 # Create necessary directories
 RUN mkdir -p /app/app/ml_model
 
+# Download model files during build
+RUN python -c "import app.download_models"
+
 # Set permissions
 RUN chmod -R 755 /app
 
@@ -51,6 +54,8 @@ echo "Starting application setup..."\n\
 echo "Current directory: $(pwd)"\n\
 echo "Listing directory contents:"\n\
 ls -la\n\
+echo "Checking model files:"\n\
+ls -la /app/app/ml_model\n\
 echo "Starting database migrations..."\n\
 alembic upgrade head\n\
 echo "Database migrations completed"\n\
