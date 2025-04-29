@@ -2,7 +2,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.routes import user, recommend, hybrid
-import app.download_models  # Ensure models are downloaded before anything else
 import uvicorn
 import os
 import logging
@@ -24,15 +23,6 @@ logger.info("Starting application...")
 logger.info(f"Python version: {sys.version}")
 logger.info(f"Current working directory: {os.getcwd()}")
 logger.info(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
-
-# Download models before starting the application
-try:
-    logger.info("Downloading model files...")
-    app.download_models.download_models()
-    logger.info("Model files downloaded successfully")
-except Exception as e:
-    logger.error(f"Failed to download model files: {str(e)}")
-    raise
 
 app = FastAPI(title="Movie Recommendation System")
 
