@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 import time
-import re
+import pickle
 
 # Configure logging
 logging.basicConfig(
@@ -18,15 +18,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_confirm_token(response):
-    """Get the confirmation token from Google Drive's download page"""
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            return value
-    return None
+def verify_pickle_file(file_path):
+    """Verify that a file is a valid pickle file"""
+    try:
+        with open(file_path, 'rb') as f:
+            pickle.load(f)
+        return True
+    except Exception as e:
+        logger.error(f"Error verifying pickle file {file_path}: {str(e)}")
+        return False
 
 def download_file(url, output_path):
-    """Download a file from Google Drive with confirmation handling"""
+    """Download a file from a URL with retries"""
     max_retries = 3
     retry_delay = 5  # seconds
     
@@ -34,17 +37,10 @@ def download_file(url, output_path):
         try:
             logger.info(f"Downloading {output_path} (attempt {attempt + 1}/{max_retries})")
             
-            # First request to get the confirmation token
-            response = requests.get(url, stream=True)
+            # Use a session to maintain cookies
+            session = requests.Session()
+            response = session.get(url, stream=True)
             response.raise_for_status()
-            
-            # Check if we need to confirm the download
-            token = get_confirm_token(response)
-            if token:
-                logger.info("Confirming download...")
-                params = {'id': url.split('id=')[1], 'confirm': token}
-                response = requests.get(url, params=params, stream=True)
-                response.raise_for_status()
             
             total_size = int(response.headers.get('content-length', 0))
             block_size = 8192
@@ -57,7 +53,11 @@ def download_file(url, output_path):
                     done = int(50 * downloaded / total_size) if total_size > 0 else 0
                     logger.info(f"\r[{'=' * done}{' ' * (50-done)}] {downloaded}/{total_size} bytes")
             
-            logger.info(f"Successfully downloaded {output_path}")
+            # Verify the downloaded file
+            if not verify_pickle_file(output_path):
+                raise Exception(f"Downloaded file {output_path} is not a valid pickle file")
+            
+            logger.info(f"Successfully downloaded and verified {output_path}")
             return True
         except Exception as e:
             logger.error(f"Error downloading {output_path}: {str(e)}")
@@ -69,9 +69,10 @@ def download_file(url, output_path):
     return False
 
 def download_models():
+    # Use direct download links
     files = {
-        "movie_dict.pkl": "https://drive.google.com/uc?export=download&id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
-        "simi.pkl": "https://drive.google.com/uc?export=download&id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
+        "movie_dict.pkl": "https://drive.google.com/uc?export=download&id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu&confirm=t",
+        "simi.pkl": "https://drive.google.com/uc?export=download&id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn&confirm=t",
     }
 
     # Get the absolute path to the ml_model directory
@@ -97,12 +98,17 @@ def download_models():
         else:
             logger.info(f"{filename} already exists. Skipping download.")
     
-    # Verify all files exist
+    # Verify all files exist and are valid pickle files
     missing_files = [f for f in files.keys() if not (folder / f).exists()]
     if missing_files:
         raise Exception(f"Missing model files after download: {missing_files}")
     
-    logger.info("All model files downloaded successfully")
+    # Verify all files are valid pickle files
+    invalid_files = [f for f in files.keys() if not verify_pickle_file(folder / f)]
+    if invalid_files:
+        raise Exception(f"Invalid pickle files: {invalid_files}")
+    
+    logger.info("All model files downloaded and verified successfully")
 
 if __name__ == "__main__":
     download_models()
