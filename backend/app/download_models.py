@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 import time
 import pickle
+import gdown
 
 # Configure logging
 logging.basicConfig(
@@ -29,7 +30,7 @@ def verify_pickle_file(file_path):
         return False
 
 def download_file(url, output_path):
-    """Download a file from a URL with retries"""
+    """Download a file from Google Drive using gdown"""
     max_retries = 3
     retry_delay = 5  # seconds
     
@@ -37,21 +38,17 @@ def download_file(url, output_path):
         try:
             logger.info(f"Downloading {output_path} (attempt {attempt + 1}/{max_retries})")
             
-            # Use a session to maintain cookies
-            session = requests.Session()
-            response = session.get(url, stream=True)
-            response.raise_for_status()
+            # Extract file ID from URL
+            file_id = url.split('id=')[1].split('&')[0]
             
-            total_size = int(response.headers.get('content-length', 0))
-            block_size = 8192
-            downloaded = 0
-            
-            with open(output_path, 'wb') as f:
-                for data in response.iter_content(block_size):
-                    downloaded += len(data)
-                    f.write(data)
-                    done = int(50 * downloaded / total_size) if total_size > 0 else 0
-                    logger.info(f"\r[{'=' * done}{' ' * (50-done)}] {downloaded}/{total_size} bytes")
+            # Download using gdown with proper format
+            gdown.download(
+                id=file_id,
+                output=str(output_path),
+                quiet=False,
+                fuzzy=True,
+                resume=True
+            )
             
             # Verify the downloaded file
             if not verify_pickle_file(output_path):
@@ -69,10 +66,10 @@ def download_file(url, output_path):
     return False
 
 def download_models():
-    # Use direct download links
+    # Use direct download links with proper format
     files = {
-        "movie_dict.pkl": "https://drive.google.com/uc?export=download&id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu&confirm=t",
-        "simi.pkl": "https://drive.google.com/uc?export=download&id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn&confirm=t",
+        "movie_dict.pkl": "https://drive.google.com/uc?export=download&id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
+        "simi.pkl": "https://drive.google.com/uc?export=download&id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
     }
 
     # Get the absolute path to the ml_model directory
