@@ -6,8 +6,7 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PORT=8000 \
-    PYTHONPATH=/app \
-    LOG_LEVEL=debug
+    PYTHONPATH=/app
 
 # Set work directory
 WORKDIR /app
@@ -58,12 +57,8 @@ alembic upgrade head\n\
 echo "Database migrations completed"\n\
 echo "Starting application..."\n\
 python -c "import app.download_models; app.download_models.download_models()"\n\
-uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --log-level ${LOG_LEVEL} --reload\n\
+uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --reload\n\
 ' > /app/start.sh && chmod +x /app/start.sh
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:${PORT}/health || exit 1
 
 # Command to run the application
 CMD ["/app/start.sh"]
