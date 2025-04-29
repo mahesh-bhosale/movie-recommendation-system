@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware  # Import CORS
 from app.routes import user, recommend, hybrid
 # from app.hybrid import router as hybrid_router  # Import hybrid router
+import app.download_models  #  Ensures models are downloaded before anything else
 import uvicorn
 
 app = FastAPI(title="Movie Recommendation System")
