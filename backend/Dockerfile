@@ -56,6 +56,9 @@ alembic upgrade head\n\
 echo "Database migrations completed"\n\
 echo "Starting application..."\n\
 python -c "import app.download_models; app.download_models.download_models()"\n\
+echo "Verifying model files..."\n\
+python -c "import pickle; pickle.load(open(\"/app/app/ml_model/movie_dict.pkl\", \"rb\")); pickle.load(open(\"/app/app/ml_model/simi.pkl\", \"rb\"))"\n\
+echo "Model files verified successfully"\n\
 uvicorn app.main:app --host 0.0.0.0 --port ${PORT}\n\
 ' > /app/start.sh && chmod +x /app/start.sh
 

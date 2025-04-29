@@ -6,6 +6,7 @@ import logging
 import sys
 from pathlib import Path
 import time
+import re
 
 # Configure logging
 logging.basicConfig(
@@ -17,16 +18,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def get_confirm_token(response):
+    """Get the confirmation token from Google Drive's download page"""
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            return value
+    return None
+
 def download_file(url, output_path):
-    """Download a file from a URL with retries"""
+    """Download a file from Google Drive with confirmation handling"""
     max_retries = 3
     retry_delay = 5  # seconds
     
     for attempt in range(max_retries):
         try:
             logger.info(f"Downloading {output_path} (attempt {attempt + 1}/{max_retries})")
+            
+            # First request to get the confirmation token
             response = requests.get(url, stream=True)
             response.raise_for_status()
+            
+            # Check if we need to confirm the download
+            token = get_confirm_token(response)
+            if token:
+                logger.info("Confirming download...")
+                params = {'id': url.split('id=')[1], 'confirm': token}
+                response = requests.get(url, params=params, stream=True)
+                response.raise_for_status()
             
             total_size = int(response.headers.get('content-length', 0))
             block_size = 8192
