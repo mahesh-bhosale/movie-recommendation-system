@@ -1,10 +1,11 @@
 # app/download_models.py
 
 import os
-import gdown
+import requests
 import logging
 import sys
 from pathlib import Path
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -16,10 +17,43 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+def download_file(url, output_path):
+    """Download a file from a URL with retries"""
+    max_retries = 3
+    retry_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            logger.info(f"Downloading {output_path} (attempt {attempt + 1}/{max_retries})")
+            response = requests.get(url, stream=True)
+            response.raise_for_status()
+            
+            total_size = int(response.headers.get('content-length', 0))
+            block_size = 8192
+            downloaded = 0
+            
+            with open(output_path, 'wb') as f:
+                for data in response.iter_content(block_size):
+                    downloaded += len(data)
+                    f.write(data)
+                    done = int(50 * downloaded / total_size) if total_size > 0 else 0
+                    logger.info(f"\r[{'=' * done}{' ' * (50-done)}] {downloaded}/{total_size} bytes")
+            
+            logger.info(f"Successfully downloaded {output_path}")
+            return True
+        except Exception as e:
+            logger.error(f"Error downloading {output_path}: {str(e)}")
+            if attempt < max_retries - 1:
+                logger.info(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                raise
+    return False
+
 def download_models():
     files = {
-        "movie_dict.pkl": "https://drive.google.com/uc?id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
-        "simi.pkl": "https://drive.google.com/uc?id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
+        "movie_dict.pkl": "https://drive.google.com/uc?export=download&id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
+        "simi.pkl": "https://drive.google.com/uc?export=download&id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
     }
 
     # Get the absolute path to the ml_model directory
@@ -34,13 +68,10 @@ def download_models():
     for filename, url in files.items():
         path = folder / filename
         if not path.exists():
-            logger.info(f"Downloading {filename}...")
             try:
-                gdown.download(url, str(path), quiet=False)
-                if path.exists():
+                if download_file(url, str(path)):
                     logger.info(f"Successfully downloaded {filename}")
                 else:
-                    logger.error(f"Failed to download {filename}")
                     raise Exception(f"Failed to download {filename}")
             except Exception as e:
                 logger.error(f"Error downloading {filename}: {str(e)}")

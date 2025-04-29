@@ -39,10 +39,9 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p /app/app/ml_model
-
-# Set permissions
-RUN chmod -R 755 /app
+RUN mkdir -p /app/app/ml_model && \
+    chmod -R 755 /app && \
+    chown -R root:root /app
 
 # Create startup script
 RUN echo '#!/bin/bash\n\
