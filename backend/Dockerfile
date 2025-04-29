@@ -5,7 +5,8 @@ FROM python:3.11-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PORT=8000
+    PORT=8000 \
+    PYTHONPATH=/app
 
 # Set work directory
 WORKDIR /app
@@ -19,6 +20,7 @@ RUN apt-get update && \
     python3-setuptools \
     python3-wheel \
     python3-venv \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better cache
@@ -46,5 +48,13 @@ RUN chmod -R 755 /app
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
+# Create startup script
+RUN echo '#!/bin/bash\n\
+echo "Starting database migrations..."\n\
+alembic upgrade head\n\
+echo "Starting application..."\n\
+uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --log-level debug\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
 # Command to run the application
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["/app/start.sh"]
