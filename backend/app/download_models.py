@@ -99,14 +99,15 @@ def download_models():
     try:
         os.makedirs("app/ml_model", exist_ok=True)
 
+        # Using direct file IDs instead of URLs
         download_from_drive(
-            "https://drive.google.com/file/d/1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu/view?usp=sharing",
+            "1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",  # movie_dict.pkl file ID
             "app/ml_model/movie_dict.pkl"
         )
         print("✅ movie_dict.pkl downloaded and verified.")
 
         download_from_drive(
-            "https://drive.google.com/file/d/1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn/view?usp=sharing",
+            "1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",  # simi.pkl file ID
             "app/ml_model/simi.pkl"
         )
         print("✅ simi.pkl downloaded and verified.")
