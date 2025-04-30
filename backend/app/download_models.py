@@ -67,6 +67,11 @@ def download_file(url, output_path, chunk_size=8192, min_size=None):
     # Check file size after download
     file_size = output_path.stat().st_size
     if min_size and file_size < min_size:
+        # If we got a small file, it might be an HTML error page
+        with open(output_path, 'rb') as f:
+            content = f.read(1024)
+            if b'<html' in content.lower():
+                raise ValueError("Received HTML response instead of file data")
         raise ValueError(f"Downloaded file size ({file_size} bytes) is smaller than minimum expected size ({min_size} bytes)")
     
     return file_size
@@ -116,17 +121,11 @@ def download_from_drive(file_id, output, retries=3, min_size=None):
                 raise ValueError("Downloaded file is empty")
             print(f"Downloaded file size: {file_size / (1024*1024):.2f} MB")
             
-            # Additional wait for large files
             # Adaptive wait time for large files
             if file_size > 50 * 1024 * 1024:  # > 50MB
-                wait_time = min(30, int(file_size / (10 * 1024 * 1024)))  # 1s per 10MB, max 30s
+                wait_time = min(60, int(file_size / (5 * 1024 * 1024)))  # 1s per 5MB, max 60s
                 print(f"Waiting {wait_time} seconds for file to be fully written...")
-                time.sleep(2*wait_time)       
-
-            # if file_size > 50 * 1024 * 1024:  # If file is larger than 50MB
-            #     print("Waiting for file to be fully written...")
-            #     time.sleep(10)  # Increased wait time for large files
-                
+                time.sleep(wait_time)
                 
             # Verify pickle file if applicable
             if output.suffix.lower() == '.pkl':
@@ -175,7 +174,7 @@ def download_models():
         download_from_drive(
             "1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
             model_dir / "simi.pkl",
-            min_size=100 * 1024 * 1024  # Minimum size: 100MB
+            min_size=170 * 1024 * 1024  # Minimum size: 170MB (actual size is ~176MB)
         )
         print("✅ simi.pkl downloaded and verified.")
         
