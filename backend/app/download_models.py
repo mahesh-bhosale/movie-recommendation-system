@@ -14,7 +14,7 @@ def is_valid_pickle(file_path):
     except Exception:
         return False
 
-def download_file(url, output_path, chunk_size=8192, expected_size=None):
+def download_file(url, output_path, chunk_size=8192, min_size=None):
     """
     Download a file from a URL with progress bar.
     Handles Google Drive's large file download confirmation.
@@ -23,7 +23,7 @@ def download_file(url, output_path, chunk_size=8192, expected_size=None):
         url (str): URL to download from
         output_path (Path): Path to save the file
         chunk_size (int): Size of chunks to download at a time
-        expected_size (int): Expected file size in bytes
+        min_size (int): Minimum expected file size in bytes
     """
     session = requests.Session()
     
@@ -47,12 +47,11 @@ def download_file(url, output_path, chunk_size=8192, expected_size=None):
             response.raise_for_status()
     
     total_size = int(response.headers.get('content-length', 0))
-    if expected_size and total_size < expected_size:
-        raise ValueError(f"Downloaded file size ({total_size} bytes) is smaller than expected ({expected_size} bytes)")
     
+    # For large files, we'll check the size after download
     with open(output_path, 'wb') as f, tqdm(
         desc=output_path.name,
-        total=total_size,
+        total=total_size if total_size > 0 else None,
         unit='iB',
         unit_scale=True,
         unit_divisor=1024,
@@ -63,10 +62,16 @@ def download_file(url, output_path, chunk_size=8192, expected_size=None):
                 pbar.update(size)
     
     # Wait for file to be fully written
-    time.sleep(1)
-    return total_size
+    time.sleep(2)
+    
+    # Check file size after download
+    file_size = output_path.stat().st_size
+    if min_size and file_size < min_size:
+        raise ValueError(f"Downloaded file size ({file_size} bytes) is smaller than minimum expected size ({min_size} bytes)")
+    
+    return file_size
 
-def download_from_drive(file_id, output, retries=3, expected_size=None):
+def download_from_drive(file_id, output, retries=3, min_size=None):
     """
     Download a file from Google Drive.
     
@@ -74,7 +79,7 @@ def download_from_drive(file_id, output, retries=3, expected_size=None):
         file_id (str): Google Drive file ID
         output (str): Path to save the downloaded file
         retries (int): Number of times to retry the download on failure
-        expected_size (int): Expected file size in bytes
+        min_size (int): Minimum expected file size in bytes
     """
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -82,7 +87,7 @@ def download_from_drive(file_id, output, retries=3, expected_size=None):
     # Check if file already exists and is valid
     if output.exists():
         current_size = output.stat().st_size
-        if expected_size and current_size == expected_size:
+        if min_size and current_size >= min_size:
             if is_valid_pickle(output):
                 print(f"✅ {output.name} already exists and is valid")
                 return str(output)
@@ -100,7 +105,7 @@ def download_from_drive(file_id, output, retries=3, expected_size=None):
     for attempt in range(1, retries + 1):
         try:
             print(f"Download attempt {attempt}...")
-            downloaded_size = download_file(url, output, expected_size=expected_size)
+            downloaded_size = download_file(url, output, min_size=min_size)
             
             if not output.exists():
                 raise ValueError("Download failed - file not created")
@@ -114,7 +119,7 @@ def download_from_drive(file_id, output, retries=3, expected_size=None):
             # Additional wait for large files
             if file_size > 50 * 1024 * 1024:  # If file is larger than 50MB
                 print("Waiting for file to be fully written...")
-                time.sleep(5)
+                time.sleep(10)  # Increased wait time for large files
                 
             # Verify pickle file if applicable
             if output.suffix.lower() == '.pkl':
@@ -154,7 +159,7 @@ def download_models():
         download_from_drive(
             "1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
             model_dir / "movie_dict.pkl",
-            expected_size=2216684  # Expected size in bytes
+            min_size=2000000  # Minimum size: ~2MB
         )
         print("✅ movie_dict.pkl downloaded and verified.")
         
@@ -163,7 +168,7 @@ def download_models():
         download_from_drive(
             "1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
             model_dir / "simi.pkl",
-            expected_size=150 * 1024 * 1024  # Expected size: 150MB
+            min_size=100 * 1024 * 1024  # Minimum size: 100MB
         )
         print("✅ simi.pkl downloaded and verified.")
         
