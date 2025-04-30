@@ -117,9 +117,16 @@ def download_from_drive(file_id, output, retries=3, min_size=None):
             print(f"Downloaded file size: {file_size / (1024*1024):.2f} MB")
             
             # Additional wait for large files
-            if file_size > 50 * 1024 * 1024:  # If file is larger than 50MB
-                print("Waiting for file to be fully written...")
-                time.sleep(10)  # Increased wait time for large files
+            # Adaptive wait time for large files
+            if file_size > 50 * 1024 * 1024:  # > 50MB
+                wait_time = min(30, int(file_size / (10 * 1024 * 1024)))  # 1s per 10MB, max 30s
+                print(f"Waiting {wait_time} seconds for file to be fully written...")
+                time.sleep(wait_time)       
+
+            # if file_size > 50 * 1024 * 1024:  # If file is larger than 50MB
+            #     print("Waiting for file to be fully written...")
+            #     time.sleep(10)  # Increased wait time for large files
+                
                 
             # Verify pickle file if applicable
             if output.suffix.lower() == '.pkl':
