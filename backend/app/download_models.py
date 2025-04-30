@@ -14,41 +14,38 @@ def is_valid_pickle(file_path):
     except Exception:
         return False
 
-def download_file(url, output_path, chunk_size=8192, min_size=None):
+def download_large_file(file_id, output_path, chunk_size=8192):
     """
-    Download a file from a URL with progress bar.
-    Handles Google Drive's large file download confirmation.
+    Download a large file from Google Drive using a different approach.
     
     Args:
-        url (str): URL to download from
+        file_id (str): Google Drive file ID
         output_path (Path): Path to save the file
         chunk_size (int): Size of chunks to download at a time
-        min_size (int): Minimum expected file size in bytes
     """
     session = requests.Session()
     
-    # First request to get the confirmation token
+    # First request to get the download URL
+    url = f'https://drive.google.com/uc?export=download&id={file_id}'
     response = session.get(url, stream=True)
     response.raise_for_status()
     
-    # Check if we got a confirmation page
-    if 'text/html' in response.headers.get('content-type', ''):
-        # Extract the confirmation token
-        confirm_token = None
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                confirm_token = value
-                break
-        
-        if confirm_token:
-            # Make the actual download request with the confirmation token
-            url = f"{url}&confirm={confirm_token}"
-            response = session.get(url, stream=True)
-            response.raise_for_status()
+    # Extract the download URL from the HTML response
+    download_url = None
+    for line in response.iter_lines():
+        if b'downloadUrl' in line:
+            download_url = line.decode('utf-8').split('"')[3]
+            break
+    
+    if not download_url:
+        raise ValueError("Could not extract download URL from Google Drive response")
+    
+    # Download the file
+    response = session.get(download_url, stream=True)
+    response.raise_for_status()
     
     total_size = int(response.headers.get('content-length', 0))
     
-    # For large files, we'll check the size after download
     with open(output_path, 'wb') as f, tqdm(
         desc=output_path.name,
         total=total_size if total_size > 0 else None,
@@ -61,20 +58,7 @@ def download_file(url, output_path, chunk_size=8192, min_size=None):
                 size = f.write(chunk)
                 pbar.update(size)
     
-    # Wait for file to be fully written
-    time.sleep(2)
-    
-    # Check file size after download
-    file_size = output_path.stat().st_size
-    if min_size and file_size < min_size:
-        # If we got a small file, it might be an HTML error page
-        with open(output_path, 'rb') as f:
-            content = f.read(1024)
-            if b'<html' in content.lower():
-                raise ValueError("Received HTML response instead of file data")
-        raise ValueError(f"Downloaded file size ({file_size} bytes) is smaller than minimum expected size ({min_size} bytes)")
-    
-    return file_size
+    return total_size
 
 def download_from_drive(file_id, output, retries=3, min_size=None):
     """
@@ -103,14 +87,32 @@ def download_from_drive(file_id, output, retries=3, min_size=None):
             print(f"⚠️ {output.name} exists but size mismatch, will redownload")
             output.unlink()
     
-    # Google Drive direct download URL
-    url = f'https://drive.google.com/uc?export=download&id={file_id}'
-    
     last_exception = None
     for attempt in range(1, retries + 1):
         try:
             print(f"Download attempt {attempt}...")
-            downloaded_size = download_file(url, output, min_size=min_size)
+            
+            # Use different download method for large files
+            if min_size and min_size > 50 * 1024 * 1024:  # If file is larger than 50MB
+                downloaded_size = download_large_file(file_id, output)
+            else:
+                url = f'https://drive.google.com/uc?export=download&id={file_id}'
+                response = requests.get(url, stream=True)
+                response.raise_for_status()
+                
+                total_size = int(response.headers.get('content-length', 0))
+                with open(output, 'wb') as f, tqdm(
+                    desc=output.name,
+                    total=total_size if total_size > 0 else None,
+                    unit='iB',
+                    unit_scale=True,
+                    unit_divisor=1024,
+                ) as pbar:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            size = f.write(chunk)
+                            pbar.update(size)
+                downloaded_size = output.stat().st_size
             
             if not output.exists():
                 raise ValueError("Download failed - file not created")
@@ -121,9 +123,9 @@ def download_from_drive(file_id, output, retries=3, min_size=None):
                 raise ValueError("Downloaded file is empty")
             print(f"Downloaded file size: {file_size / (1024*1024):.2f} MB")
             
-            # Adaptive wait time for large files
+            # Wait for large files
             if file_size > 50 * 1024 * 1024:  # > 50MB
-                wait_time = min(60, int(file_size / (5 * 1024 * 1024)))  # 1s per 5MB, max 60s
+                wait_time = 300  # Wait 5 minutes for large files
                 print(f"Waiting {wait_time} seconds for file to be fully written...")
                 time.sleep(wait_time)
                 
