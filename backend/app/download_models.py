@@ -38,12 +38,9 @@ def download_file(url, output_path):
         try:
             logger.info(f"Downloading {output_path} (attempt {attempt + 1}/{max_retries})")
             
-            # Extract file ID from URL
-            file_id = url.split('id=')[1].split('&')[0]
-            
-            # Download using gdown with proper format
+            # Download using gdown with direct URL
             gdown.download(
-                id=file_id,
+                url=url,
                 output=str(output_path),
                 quiet=False,
                 fuzzy=True,
@@ -68,8 +65,8 @@ def download_file(url, output_path):
 def download_models():
     # Use direct download links with proper format
     files = {
-        "movie_dict.pkl": "https://drive.google.com/uc?export=download&id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
-        "simi.pkl": "https://drive.google.com/uc?export=download&id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
+        "movie_dict.pkl": "https://drive.google.com/uc?id=1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
+        "simi.pkl": "https://drive.google.com/uc?id=1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
     }
 
     # Get the absolute path to the ml_model directory
