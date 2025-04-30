@@ -30,18 +30,23 @@ def download_large_file(file_id, output_path, chunk_size=8192):
     response = session.get(url, stream=True)
     response.raise_for_status()
     
-    # Extract the download URL from the HTML response
+    # Get cookies from the response
+    cookies = response.cookies
+    
+    # Get the download URL from the response
     download_url = None
     for line in response.iter_lines():
-        if b'downloadUrl' in line:
-            download_url = line.decode('utf-8').split('"')[3]
+        line = line.decode('utf-8')
+        if 'downloadUrl' in line:
+            download_url = line.split('"')[3]
             break
     
     if not download_url:
-        raise ValueError("Could not extract download URL from Google Drive response")
+        # If we couldn't get the download URL, try with the original URL and cookies
+        download_url = url
     
-    # Download the file
-    response = session.get(download_url, stream=True)
+    # Download the file with cookies
+    response = session.get(download_url, cookies=cookies, stream=True)
     response.raise_for_status()
     
     total_size = int(response.headers.get('content-length', 0))
