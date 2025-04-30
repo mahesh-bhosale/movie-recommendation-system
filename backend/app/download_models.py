@@ -30,7 +30,7 @@ def verify_pickle_file(file_path):
         return False
 
 def download_file(url, output_path):
-    """Download a file from Google Drive using gdown"""
+    """Download a file from Google Drive using requests"""
     max_retries = 3
     retry_delay = 5  # seconds
     
@@ -38,14 +38,25 @@ def download_file(url, output_path):
         try:
             logger.info(f"Downloading {output_path} (attempt {attempt + 1}/{max_retries})")
             
-            # Download using gdown with direct URL
-            gdown.download(
-                url=url,
-                output=str(output_path),
-                quiet=False,
-                fuzzy=True,
-                resume=True
-            )
+            # Extract file ID from URL
+            file_id = url.split('id=')[1]
+            
+            # First request to get the download URL
+            session = requests.Session()
+            response = session.get(url, allow_redirects=True)
+            
+            # Get the download URL from the response
+            download_url = response.url
+            
+            # Download the file
+            response = session.get(download_url, stream=True)
+            response.raise_for_status()
+            
+            # Save the file
+            with open(output_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
             
             # Verify the downloaded file
             if not verify_pickle_file(output_path):
