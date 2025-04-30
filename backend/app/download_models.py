@@ -29,14 +29,21 @@ def download_from_drive(link_or_id, output, retries=3, quiet=False):
     url = link_or_id
 
     if is_url:
-        parsed = urlparse(link_or_id)
-        query_params = parse_qs(parsed.query)
-        if 'id' in query_params:
-            file_id = query_params['id'][0]
-        else:
-            match = re.search(r'/d/([A-Za-z0-9_-]+)', link_or_id)
+        # Try to extract file ID from various Google Drive URL formats
+        patterns = [
+            r'/d/([A-Za-z0-9_-]+)',  # Standard format
+            r'id=([A-Za-z0-9_-]+)',  # URL parameter format
+            r'file/d/([A-Za-z0-9_-]+)',  # Alternative format
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, link_or_id)
             if match:
                 file_id = match.group(1)
+                break
+        
+        if not file_id:
+            raise ValueError(f"Could not extract file ID from URL: {link_or_id}")
     else:
         file_id = link_or_id
 
@@ -44,7 +51,13 @@ def download_from_drive(link_or_id, output, retries=3, quiet=False):
     for attempt in range(1, retries + 1):
         try:
             if is_url:
-                downloaded = gdown.download(url=url, output=output, quiet=quiet, fuzzy=True)
+                # Try with direct URL first
+                try:
+                    downloaded = gdown.download(url=url, output=output, quiet=quiet, fuzzy=True)
+                except Exception as e:
+                    print(f"Direct URL download failed: {e}")
+                    # Fall back to file ID if URL fails
+                    downloaded = gdown.download(id=file_id, output=output, quiet=quiet)
             else:
                 downloaded = gdown.download(id=file_id, output=output, quiet=quiet)
 
@@ -61,9 +74,6 @@ def download_from_drive(link_or_id, output, retries=3, quiet=False):
                 os.remove(output)
 
             if attempt < retries:
-                if is_url and file_id and attempt == 1:
-                    print("Retrying using extracted file ID instead of URL")
-                    is_url = False
                 time.sleep(1)
                 continue
             else:
