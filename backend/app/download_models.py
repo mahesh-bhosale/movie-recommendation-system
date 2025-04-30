@@ -1,102 +1,101 @@
 import os
-import logging
-import sys
-from pathlib import Path
+import re
+import time
 import pickle
+from urllib.parse import urlparse, parse_qs
+
 import gdown
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-logger = logging.getLogger(__name__)
+def download_from_drive(link_or_id, output, retries=3, quiet=False):
+    """
+    Download a file from Google Drive using gdown.
+    Accepts either a file ID or a full share URL.
 
-def validate_file_id(file_id):
-    """Ensure valid Google Drive file ID format"""
-    if not (len(file_id) == 33 and file_id.isalnum()):
-        raise ValueError(f"Invalid Google Drive file ID: {file_id}")
+    Args:
+        link_or_id (str): Google Drive file ID or full share URL.
+        output (str): Path to save the downloaded file.
+        retries (int): Number of times to retry the download on failure.
+        quiet (bool): If True, suppress progress output from gdown.
 
-def download_file(file_id, output_path):
-    try:
-        logger.info(f"Downloading {output_path} (ID: {file_id})")
-        
-        # Validate file ID format first
-        validate_file_id(file_id)
-        
-        # First method: direct download using file ID
+    Returns:
+        str: Path to the downloaded file.
+
+    Raises:
+        RuntimeError: If the file cannot be downloaded or is corrupted.
+    """
+    # Determine if the input is a URL or a file ID
+    is_url = bool(re.match(r'^https?://', link_or_id))
+    file_id = None
+    url = link_or_id
+
+    if is_url:
+        parsed = urlparse(link_or_id)
+        query_params = parse_qs(parsed.query)
+        if 'id' in query_params:
+            file_id = query_params['id'][0]
+        else:
+            match = re.search(r'/d/([A-Za-z0-9_-]+)', link_or_id)
+            if match:
+                file_id = match.group(1)
+    else:
+        file_id = link_or_id
+
+    last_exception = None
+    for attempt in range(1, retries + 1):
         try:
-            gdown.download(id=file_id, output=output_path, quiet=False)
-            if verify_file(output_path):
-                return True
+            if is_url:
+                downloaded = gdown.download(url=url, output=output, quiet=quiet, fuzzy=True)
+            else:
+                downloaded = gdown.download(id=file_id, output=output, quiet=quiet)
+
+            if downloaded is None or not os.path.exists(output):
+                raise ValueError("gdown download failed or returned no file")
+
+            break  # Download succeeded
+
         except Exception as e:
-            logger.warning(f"Direct download failed: {str(e)}")
-        
-        # Fallback method: use alternative URL format
-        try:
-            url = f"https://drive.google.com/uc?id={file_id}"
-            gdown.download(url, output_path, quiet=False, fuzzy=True)
-            return verify_file(output_path)
-        except Exception as e:
-            logger.error(f"Fallback download failed: {str(e)}")
-            return False
-            
-    except Exception as e:
-        logger.error(f"Download failed: {str(e)}")
-        return False
+            last_exception = e
+            print(f"Download attempt {attempt} failed: {e}")
 
-def verify_file(path):
-    """Check file exists and is valid pickle"""
-    if not os.path.exists(path):
-        raise FileNotFoundError("File not created")
-    if not verify_pickle_file(path):
-        raise ValueError("Invalid pickle content")
-    return True
+            if os.path.exists(output):
+                os.remove(output)
 
-def verify_pickle_file(file_path):
-    try:
-        with open(file_path, 'rb') as f:
-            pickle.load(f)
-        return True
-    except Exception as e:
-        logger.error(f"Invalid pickle file: {e}")
-        return False
-
-def download_models():
-    files = {
-        "movie_dict.pkl": "1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu",
-        "simi.pkl": "1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn",
-    }
-
-    folder = Path(__file__).parent / "ml_model"
-    folder.mkdir(parents=True, exist_ok=True)
-
-    for filename, file_id in files.items():
-        path = folder / filename
-        if path.exists():
-            if verify_pickle_file(path):
-                logger.info(f"Valid file exists: {filename}")
+            if attempt < retries:
+                if is_url and file_id and attempt == 1:
+                    print("Retrying using extracted file ID instead of URL")
+                    is_url = False
+                time.sleep(1)
                 continue
             else:
-                logger.warning(f"Removing corrupted file: {filename}")
-                path.unlink()
+                raise RuntimeError(f"Failed to download file after {retries} attempts: {last_exception}")
 
-        logger.info(f"Starting download: {filename}")
-        for attempt in range(3):
-            if download_file(file_id, str(path)):
-                logger.info(f"Successfully downloaded {filename}")
-                break
-            logger.warning(f"Attempt {attempt+1} failed for {filename}")
-            if path.exists():
-                path.unlink()
-        else:
-            raise Exception(f"Failed after 3 attempts: {filename}")
+    # Verify downloaded file if it's a pickle
+    if output.lower().endswith('.pkl'):
+        try:
+            with open(output, 'rb') as f:
+                pickle.load(f)
+        except Exception as e:
+            if os.path.exists(output):
+                os.remove(output)
+            raise RuntimeError(f"Downloaded pickle file is corrupted: {e}")
 
-    logger.info("✅ All files successfully downloaded and verified")
+    return output
 
 if __name__ == "__main__":
     try:
-        download_models()
+        os.makedirs("app/ml_model", exist_ok=True)
+
+        download_from_drive(
+            "https://drive.google.com/file/d/1XraEXCrqAr_8JR11ZGA2Gxe2QYHxy8lu/view?usp=sharing",
+            "app/ml_model/movie_dict.pkl"
+        )
+        print("✅ movie_dict.pkl downloaded and verified.")
+
+        download_from_drive(
+            "https://drive.google.com/file/d/1z48JOfbPcYLfZzbr9ax0lBqTDtND0Bvn/view?usp=sharing",
+            "app/ml_model/simi.pkl"
+        )
+        print("✅ simi.pkl downloaded and verified.")
+
     except Exception as e:
-        logger.critical(f"Setup failed: {str(e)}")
-        sys.exit(1)
+        print(f"❌ Error during model download: {e}")
