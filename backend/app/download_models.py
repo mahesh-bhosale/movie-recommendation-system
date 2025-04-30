@@ -1,35 +1,55 @@
 import os
-import re
 import time
 import pickle
-import gdown
+import requests
 from pathlib import Path
+from tqdm import tqdm
 
-def download_from_drive(file_id, output, retries=3, quiet=False):
+def download_file(url, output_path, chunk_size=8192):
     """
-    Download a file from Google Drive using gdown.
+    Download a file from a URL with progress bar.
+    
+    Args:
+        url (str): URL to download from
+        output_path (Path): Path to save the file
+        chunk_size (int): Size of chunks to download at a time
+    """
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+    
+    total_size = int(response.headers.get('content-length', 0))
+    
+    with open(output_path, 'wb') as f, tqdm(
+        desc=output_path.name,
+        total=total_size,
+        unit='iB',
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as pbar:
+        for chunk in response.iter_content(chunk_size=chunk_size):
+            size = f.write(chunk)
+            pbar.update(size)
+
+def download_from_drive(file_id, output, retries=3):
+    """
+    Download a file from Google Drive.
     
     Args:
         file_id (str): Google Drive file ID
         output (str): Path to save the downloaded file
         retries (int): Number of times to retry the download on failure
-        quiet (bool): If True, suppress progress output from gdown
-
-    Returns:
-        str: Path to the downloaded file
-
-    Raises:
-        RuntimeError: If the file cannot be downloaded or is corrupted
     """
     output = Path(output)
     output.parent.mkdir(parents=True, exist_ok=True)
     
+    # Google Drive direct download URL
+    url = f'https://drive.google.com/uc?export=download&id={file_id}'
+    
     last_exception = None
     for attempt in range(1, retries + 1):
         try:
-            # Use gdown's more robust download method for large files
-            url = f'https://drive.google.com/uc?id={file_id}'
-            gdown.download(url=url, output=str(output), quiet=quiet, fuzzy=True)
+            print(f"Download attempt {attempt}...")
+            download_file(url, output)
             
             if not output.exists():
                 raise ValueError("Download failed - file not created")
