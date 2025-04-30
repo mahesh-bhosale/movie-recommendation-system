@@ -81,7 +81,11 @@ def download_from_drive(link_or_id, output, retries=3, quiet=False):
 
     return output
 
-if __name__ == "__main__":
+def download_models():
+    """
+    Download all required model files from Google Drive.
+    Creates the necessary directory structure and downloads the files.
+    """
     try:
         os.makedirs("app/ml_model", exist_ok=True)
 
@@ -99,3 +103,7 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"❌ Error during model download: {e}")
+        raise
+
+if __name__ == "__main__":
+    download_models()
