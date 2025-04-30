@@ -8,14 +8,33 @@ from tqdm import tqdm
 def download_file(url, output_path, chunk_size=8192):
     """
     Download a file from a URL with progress bar.
+    Handles Google Drive's large file download confirmation.
     
     Args:
         url (str): URL to download from
         output_path (Path): Path to save the file
         chunk_size (int): Size of chunks to download at a time
     """
-    response = requests.get(url, stream=True)
+    session = requests.Session()
+    
+    # First request to get the confirmation token
+    response = session.get(url, stream=True)
     response.raise_for_status()
+    
+    # Check if we got a confirmation page
+    if 'text/html' in response.headers.get('content-type', ''):
+        # Extract the confirmation token
+        confirm_token = None
+        for key, value in response.cookies.items():
+            if key.startswith('download_warning'):
+                confirm_token = value
+                break
+        
+        if confirm_token:
+            # Make the actual download request with the confirmation token
+            url = f"{url}&confirm={confirm_token}"
+            response = session.get(url, stream=True)
+            response.raise_for_status()
     
     total_size = int(response.headers.get('content-length', 0))
     
@@ -27,8 +46,9 @@ def download_file(url, output_path, chunk_size=8192):
         unit_divisor=1024,
     ) as pbar:
         for chunk in response.iter_content(chunk_size=chunk_size):
-            size = f.write(chunk)
-            pbar.update(size)
+            if chunk:  # filter out keep-alive new chunks
+                size = f.write(chunk)
+                pbar.update(size)
 
 def download_from_drive(file_id, output, retries=3):
     """
@@ -55,8 +75,10 @@ def download_from_drive(file_id, output, retries=3):
                 raise ValueError("Download failed - file not created")
                 
             # Verify the file size
-            if output.stat().st_size == 0:
+            file_size = output.stat().st_size
+            if file_size == 0:
                 raise ValueError("Downloaded file is empty")
+            print(f"Downloaded file size: {file_size / (1024*1024):.2f} MB")
                 
             # Verify pickle file if applicable
             if output.suffix.lower() == '.pkl':
