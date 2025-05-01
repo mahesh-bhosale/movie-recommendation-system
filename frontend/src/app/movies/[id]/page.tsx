@@ -129,7 +129,7 @@ export default function MovieDetailsPage() {
         }
 
         await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
+            `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
             { tmdb_movie_id: tmdbId },
             {
                 headers: {
@@ -200,7 +200,7 @@ export default function MovieDetailsPage() {
     
             // Then get recommendations
             const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/recommend/`,
+                `${process.env.NEXT_PUBLIC_API_URL}/api/recommend/`,
                 {
                     params: { 
                         movie: movie.title.trim() 
@@ -278,7 +278,7 @@ export default function MovieDetailsPage() {
             if (!token) return;
 
             const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/movies/${id}/rating`,
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/${id}/rating`,
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -308,7 +308,7 @@ export default function MovieDetailsPage() {
             if (!token) throw new Error('No authentication token found');
 
             await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/movies/${id}/rate`,
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/${id}/rate`,
                 { rating },
                 {
                     headers: {

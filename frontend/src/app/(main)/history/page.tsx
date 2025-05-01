@@ -49,7 +49,7 @@ export default function HistoryPage() {
                 // Fetch user's history
                 console.log('Fetching user history...');
                 const response = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,

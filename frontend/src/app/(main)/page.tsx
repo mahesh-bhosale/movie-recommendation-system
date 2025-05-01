@@ -51,7 +51,7 @@ export default function HomePage() {
 
                 // Fetch popular movies from our backend API
                 const popularResponse = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/auth/movies/popular`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/popular`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -68,7 +68,7 @@ export default function HomePage() {
 
                 // Fetch user's history to get recommendations
                 const historyResponse = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -81,7 +81,7 @@ export default function HomePage() {
                 if (historyResponse.data && historyResponse.data.length > 0) {
                     try {
                         const recommendedResponse = await axios.get(
-                            `${process.env.NEXT_PUBLIC_API_URL}/auth/recommendations`,
+                            `${process.env.NEXT_PUBLIC_API_URL}/api/users/recommendations`,
                             {
                                 headers: {
                                     'Authorization': `Bearer ${token}`,
@@ -98,7 +98,7 @@ export default function HomePage() {
                 // Fetch favorite genres
                 try {
                     const genresResponse = await axios.get(
-                        `${process.env.NEXT_PUBLIC_API_URL}/auth/favorites/genres`,
+                        `${process.env.NEXT_PUBLIC_API_URL}/api/users/favorites/genres`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -119,7 +119,7 @@ export default function HomePage() {
                 // Fetch favorite actors
                 try {
                     const actorsResponse = await axios.get(
-                        `${process.env.NEXT_PUBLIC_API_URL}/auth/favorites/actors`,
+                        `${process.env.NEXT_PUBLIC_API_URL}/api/users/favorites/actors`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,
@@ -141,7 +141,7 @@ export default function HomePage() {
                 // Fetch favorite directors
                 try {
                     const directorsResponse = await axios.get(
-                        `${process.env.NEXT_PUBLIC_API_URL}/auth/favorites/directors`,
+                        `${process.env.NEXT_PUBLIC_API_URL}/api/users/favorites/directors`,
                         {
                             headers: {
                                 'Authorization': `Bearer ${token}`,

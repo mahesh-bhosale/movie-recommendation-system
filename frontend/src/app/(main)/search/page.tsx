@@ -39,7 +39,7 @@ export default function SearchPage() {
 
             console.log('Adding movie to history:', movie.title);
             await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/auth/history`,
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
                 {
                     tmdb_movie_id: movie.id
                 },
@@ -70,9 +70,9 @@ export default function SearchPage() {
             setRecommendations([]); // Clear previous recommendations
 
             const recommendationsResponse = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/recommend/`,
+                `${process.env.NEXT_PUBLIC_API_URL}/api/recommend/`,
                 {
-                  params: { movie: searchQuery }, // Axios will properly encode the query
+                  params: { movie: searchQuery },
                   headers: {
                     Authorization: `Bearer ${token}`
                   }
@@ -82,7 +82,7 @@ export default function SearchPage() {
             if (recommendationsResponse.data.recommendations) {
                 // First, add the searched movie to history
                 const searchedMovieResponse = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/auth/search/movie`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/search/movie`,
                     {
                         params: { query: searchQuery },
                         headers: {
@@ -110,7 +110,7 @@ export default function SearchPage() {
                 const moviePromises = recommendationsResponse.data.recommendations.map(async (title: string) => {
                     try {
                         const movieResponse = await axios.get(
-                            `${process.env.NEXT_PUBLIC_API_URL}/auth/search/movie`,
+                            `${process.env.NEXT_PUBLIC_API_URL}/api/users/search/movie`,
                             {
                                 params: { query: title },
                                 // headers: {

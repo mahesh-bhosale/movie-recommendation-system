@@ -12,7 +12,7 @@ export const registerUser = async (userData: {
     favorite_directors: string[];
 }) => {
     try {
-        const response = await axios.post(`${API_BASE_URL}/auth/register`, userData);
+        const response = await axios.post(`${API_BASE_URL}/api/users/register`, userData);
         return response.data;
     } catch (error) {
         console.error("Registration error:", error);
@@ -24,7 +24,7 @@ export const registerUser = async (userData: {
 export const loginUser = async (userData: { username: string; password: string }) => {
     try {
         console.log("Attempting login with:", userData);
-        const response = await axios.post(`${API_BASE_URL}/auth/login`, userData);
+        const response = await axios.post(`${API_BASE_URL}/api/users/login`, userData);
         console.log("Login response:", response.data);
         
         if (!response.data.access_token) {
@@ -45,7 +45,7 @@ export const loginUser = async (userData: { username: string; password: string }
 // Fetch Recommendations with Full Movie Details
 export const getRecommendations = async (movie: string, token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/recommend/`, {
+        const response = await axios.get(`${API_BASE_URL}/api/recommend/`, {
             params: { movie },
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -60,7 +60,7 @@ export const getRecommendations = async (movie: string, token: string) => {
             movieTitles.map(async (title: string) => {
                 try {
                     const searchRes = await axios.get(
-                        `${API_BASE_URL}/auth/search/movie`,
+                        `${API_BASE_URL}/api/users/search/movie`,
                         {
                             params: { query: title },
                             headers: {
@@ -102,7 +102,7 @@ export const getRecommendations = async (movie: string, token: string) => {
 // Fetch Popular Movies
 export const getPopularMovies = async (token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/auth/movies/popular`, {
+        const response = await axios.get(`${API_BASE_URL}/api/users/movies/popular`, {
             headers: {
                 Authorization: `Bearer ${token}`,
                 'Content-Type': 'application/json'
@@ -137,7 +137,7 @@ export const getPopularMovies = async (token: string) => {
 // Fetch Recommendation History
 export const fetchHistory = async (token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/auth/history`, {
+        const response = await axios.get(`${API_BASE_URL}/api/users/history`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -153,9 +153,9 @@ export const fetchHistory = async (token: string) => {
 // Add to History
 export const addToHistory = async (token: string, tmdb_movie_id: number) => {
     try {
-        console.log(`Adding movie ${tmdb_movie_id} to history...`);  // Debugging
+        console.log(`Adding movie ${tmdb_movie_id} to history...`);
         const response = await axios.post(
-            `${API_BASE_URL}/auth/history`,
+            `${API_BASE_URL}/api/users/history`,
             { tmdb_movie_id },
             {
                 headers: {
@@ -164,7 +164,7 @@ export const addToHistory = async (token: string, tmdb_movie_id: number) => {
                 },
             }
         );
-        console.log('History response:', response.data);  // Debugging
+        console.log('History response:', response.data);
         return response.data;
     } catch (error) {
         console.error("Error adding to history:", error);
@@ -184,7 +184,7 @@ export const addToHistory = async (token: string, tmdb_movie_id: number) => {
 // Clear History
 export const clearHistory = async (token: string) => {
     try {
-        const response = await axios.delete(`${API_BASE_URL}/auth/history`, {
+        const response = await axios.delete(`${API_BASE_URL}/api/users/history`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -199,7 +199,7 @@ export const clearHistory = async (token: string) => {
 // Get user's favorite genres
 export const getFavoriteGenres = async (token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/auth/favorites/genres`, {
+        const response = await axios.get(`${API_BASE_URL}/api/users/favorites/genres`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -214,7 +214,7 @@ export const getFavoriteGenres = async (token: string) => {
 // Get user's favorite actors
 export const getFavoriteActors = async (token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/auth/favorites/actors`, {
+        const response = await axios.get(`${API_BASE_URL}/api/users/favorites/actors`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -229,7 +229,7 @@ export const getFavoriteActors = async (token: string) => {
 // Get user's favorite directors
 export const getFavoriteDirectors = async (token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/auth/favorites/directors`, {
+        const response = await axios.get(`${API_BASE_URL}/api/users/favorites/directors`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -245,7 +245,7 @@ export const getFavoriteDirectors = async (token: string) => {
 export const updateFavoriteGenres = async (token: string, genres: string[]) => {
     try {
         const response = await axios.put(
-            `${API_BASE_URL}/auth/favorites/genres`,
+            `${API_BASE_URL}/api/users/favorites/genres`,
             genres,
             {
                 headers: {
@@ -264,7 +264,7 @@ export const updateFavoriteGenres = async (token: string, genres: string[]) => {
 export const updateFavoriteActors = async (token: string, actors: string[]) => {
     try {
         const response = await axios.put(
-            `${API_BASE_URL}/auth/favorites/actors`,
+            `${API_BASE_URL}/api/users/favorites/actors`,
             actors,
             {
                 headers: {
@@ -283,7 +283,7 @@ export const updateFavoriteActors = async (token: string, actors: string[]) => {
 export const updateFavoriteDirectors = async (token: string, directors: string[]) => {
     try {
         const response = await axios.put(
-            `${API_BASE_URL}/auth/favorites/directors`,
+            `${API_BASE_URL}/api/users/favorites/directors`,
             directors,
             {
                 headers: {
@@ -301,7 +301,7 @@ export const updateFavoriteDirectors = async (token: string, directors: string[]
 // Get personalized recommendations
 export const getPersonalizedRecommendations = async (token: string) => {
     try {
-        const response = await axios.get(`${API_BASE_URL}/auth/recommendations`, {
+        const response = await axios.get(`${API_BASE_URL}/api/users/recommendations`, {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -310,5 +310,95 @@ export const getPersonalizedRecommendations = async (token: string) => {
     } catch (error) {
         console.error("Error fetching personalized recommendations:", error);
         return [];
+    }
+};
+
+// Get user profile
+export const getUserProfile = async (token: string) => {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/api/users/profile`, {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        throw error;
+    }
+};
+
+// Update user profile
+export const updateUserProfile = async (token: string, profileData: any) => {
+    try {
+        const response = await axios.put(
+            `${API_BASE_URL}/api/users/profile`,
+            profileData,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error("Error updating user profile:", error);
+        throw error;
+    }
+};
+
+// Rate a movie
+export const rateMovie = async (token: string, tmdb_id: number, rating: number) => {
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/api/users/movies/${tmdb_id}/rate`,
+            { rating },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error("Error rating movie:", error);
+        throw error;
+    }
+};
+
+// Get movie rating
+export const getMovieRating = async (token: string, tmdb_id: number) => {
+    try {
+        const response = await axios.get(
+            `${API_BASE_URL}/api/users/movies/${tmdb_id}/rating`,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching movie rating:", error);
+        throw error;
+    }
+};
+
+// Logout
+export const logout = async (token: string) => {
+    try {
+        const response = await axios.post(
+            `${API_BASE_URL}/api/users/logout`,
+            {},
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
+        return response.data;
+    } catch (error) {
+        console.error("Error logging out:", error);
+        throw error;
     }
 };

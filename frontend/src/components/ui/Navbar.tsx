@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import { useRouter } from 'next/navigation';
+import axios from 'axios';
 
 export default function Navbar() {
     const pathname = usePathname();
@@ -11,8 +12,26 @@ export default function Navbar() {
     const router = useRouter();
 
     const handleLogout = async () => {
-        await clearAuth();
-        router.push('/login');
+        try {
+            if (token) {
+                await axios.post(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/logout`,
+                    {},
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+            }
+            await clearAuth();
+            router.push('/login');
+        } catch (error) {
+            console.error('Error during logout:', error);
+            await clearAuth();
+            router.push('/login');
+        }
     };
 
     const isActive = (path: string) => pathname === path;

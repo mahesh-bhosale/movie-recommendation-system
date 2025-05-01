@@ -34,7 +34,7 @@ export default function ProfilePage() {
                 setError(null);
 
                 const response = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/auth/profile`,
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
