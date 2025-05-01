@@ -2,6 +2,20 @@ import axios from "axios";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+interface ApiResponse<T> {
+    data: T;
+    status: number;
+    statusText: string;
+}
+
+interface UserProfileData {
+    username?: string;
+    email?: string;
+    favorite_genres?: string[];
+    favorite_actors?: string[];
+    favorite_directors?: string[];
+}
+
 // Register User
 export const registerUser = async (userData: {
     username: string;
@@ -329,7 +343,7 @@ export const getUserProfile = async (token: string) => {
 };
 
 // Update user profile
-export const updateUserProfile = async (token: string, profileData: any) => {
+export const updateUserProfile = async (token: string, profileData: UserProfileData) => {
     try {
         const response = await axios.put(
             `${API_BASE_URL}/api/users/profile`,
@@ -337,6 +351,7 @@ export const updateUserProfile = async (token: string, profileData: any) => {
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 },
             }
         );
@@ -369,12 +384,13 @@ export const rateMovie = async (token: string, tmdb_id: number, rating: number) 
 // Get movie rating
 export const getMovieRating = async (token: string, tmdb_id: number) => {
     try {
-        const response = await axios.get(
+        const response: ApiResponse<number> = await axios.get(
             `${API_BASE_URL}/api/users/movies/${tmdb_id}/rating`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
-                },
+                    'Content-Type': 'application/json'
+                }
             }
         );
         return response.data;

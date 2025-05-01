@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth';
 import axios from 'axios';
 import MovieCard from '@/components/ui/MovieCard';
+import Image from 'next/image';
 
 interface Movie {
     id: number;
@@ -237,7 +238,15 @@ export default function HomePage() {
                                     key={movie.id}
                                     movie={movie}
                                     onClick={() => router.push(`/movie/${movie.id}`)}
-                                />
+                                >
+                                    <Image
+                                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                                        alt={movie.title}
+                                        width={500}
+                                        height={750}
+                                        className="w-full h-full object-cover rounded-lg"
+                                    />
+                                </MovieCard>
                             )
                         )}
 
@@ -250,7 +259,15 @@ export default function HomePage() {
                                     key={movie.id}
                                     movie={movie}
                                     onClick={() => router.push(`/movie/${movie.id}`)}
-                                />
+                                >
+                                    <Image
+                                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+                                        alt={movie.title}
+                                        width={500}
+                                        height={750}
+                                        className="w-full h-full object-cover rounded-lg"
+                                    />
+                                </MovieCard>
                             ),
                             'Start watching movies to get personalized recommendations!'
                         )}
@@ -282,16 +299,12 @@ export default function HomePage() {
                                     onClick={() => router.push(`/search?actor=${actor.id}`)}
                                 >
                                     <div className="aspect-square mb-3 rounded-lg overflow-hidden">
-                                        <img
-                                            src={actor.profile_path ? 
-                                                `https://image.tmdb.org/t/p/w500${actor.profile_path}` : 
-                                                'https://image.tmdb.org/t/p/w500/1E5baAaEse26fej7uHcjOgEE2t2.jpg'}
+                                        <Image
+                                            src={`https://image.tmdb.org/t/p/w500${actor.profile_path}`}
                                             alt={actor.name}
+                                            width={500}
+                                            height={750}
                                             className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.src = 'https://image.tmdb.org/t/p/w500/1E5baAaEse26fej7uHcjOgEE2t2.jpg';
-                                            }}
                                         />
                                     </div>
                                     <h3 className="text-lg font-medium">{actor.name}</h3>
@@ -311,16 +324,12 @@ export default function HomePage() {
                                     onClick={() => router.push(`/search?director=${director.id}`)}
                                 >
                                     <div className="aspect-square mb-3 rounded-lg overflow-hidden">
-                                        <img
-                                            src={director.profile_path ? 
-                                                `https://image.tmdb.org/t/p/w500${director.profile_path}` : 
-                                                'https://image.tmdb.org/t/p/w500/1E5baAaEse26fej7uHcjOgEE2t2.jpg'}
+                                        <Image
+                                            src={`https://image.tmdb.org/t/p/w500${director.profile_path}`}
                                             alt={director.name}
+                                            width={500}
+                                            height={750}
                                             className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.src = 'https://image.tmdb.org/t/p/w500/1E5baAaEse26fej7uHcjOgEE2t2.jpg';
-                                            }}
                                         />
                                     </div>
                                     <h3 className="text-lg font-medium">{director.name}</h3>

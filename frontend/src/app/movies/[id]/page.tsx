@@ -119,63 +119,35 @@ export default function MovieDetailsPage() {
     const [ratingError, setRatingError] = useState<string | null>(null);
 
     const storeMovieHistory = async (tmdbId: number) => {
-    if (!isAuthenticated) return;
+        if (!isAuthenticated) return;
 
-    try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            setIsAuthenticated(false);
-            return;
-        }
-
-        await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
-            { tmdb_movie_id: tmdbId },
-            {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setIsAuthenticated(false);
+                return;
             }
-        );
-    } catch (err) {
-        console.error('Error storing movie history:', err);
-        if (axios.isAxiosError(err) && err.response?.status === 401) {
-            // Handle unauthorized error
-            localStorage.removeItem('token');
-            setIsAuthenticated(false);
-            router.push('/login');
-        }
-    }
-};
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        setIsAuthenticated(!!token);
-    }, []);
-
-    useEffect(() => {
-        const fetchMovieDetails = async () => {
-            try {
-                const response = await axios.get(
-                    `https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&append_to_response=credits,videos,production_companies`
-                );
-                setMovie(response.data);
-                if (isAuthenticated && response.data?.title) {
-                    await storeMovieHistory(Number(id));
-                    // Only get recommendations if we have the movie title
-                    await handleGetRecommendations();
+            await axios.post(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
+                { tmdb_movie_id: tmdbId },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
                 }
-            } catch (err) {
-                console.error('Error fetching movie details:', err);
-                setError('Failed to load movie details');
-            } finally {
-                setIsLoading(false);
+            );
+        } catch (err) {
+            console.error('Error storing movie history:', err);
+            if (axios.isAxiosError(err) && err.response?.status === 401) {
+                // Handle unauthorized error
+                localStorage.removeItem('token');
+                setIsAuthenticated(false);
+                router.push('/login');
             }
-        };
-
-        fetchMovieDetails();
-    }, [id, isAuthenticated]);
+        }
+    };
 
     const handleGetRecommendations = async () => {
         if (!isAuthenticated) {
@@ -262,7 +234,41 @@ export default function MovieDetailsPage() {
             setIsLoading(false);
         }
     };
-    
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        setIsAuthenticated(!!token);
+    }, []);
+
+    useEffect(() => {
+        const fetchMovieDetails = async () => {
+            try {
+                const response = await axios.get(
+                    `https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&append_to_response=credits,videos,production_companies`
+                );
+                setMovie(response.data);
+                if (isAuthenticated && response.data?.title) {
+                    await storeMovieHistory(Number(id));
+                    // Only get recommendations if we have the movie title
+                    await handleGetRecommendations();
+                }
+            } catch (err) {
+                console.error('Error fetching movie details:', err);
+                setError('Failed to load movie details');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchMovieDetails();
+    }, [id, isAuthenticated]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchUserRating();
+        }
+    }, [id, isAuthenticated]);
+
     const getOfficialTrailer = () => {
         if (!movie?.videos?.results) return null;
         return movie.videos.results.find(
@@ -330,12 +336,6 @@ export default function MovieDetailsPage() {
             setIsRating(false);
         }
     };
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchUserRating();
-        }
-    }, [id, isAuthenticated]);
 
     if (isLoading) {
         return (
@@ -544,18 +544,10 @@ export default function MovieDetailsPage() {
                                 >
                                     <Image
                                         src={`https://image.tmdb.org/t/p/w500${rec.poster_path}`}
-                                        alt={`Movie poster for ${rec.title}`}
+                                        alt={rec.title}
                                         fill
-                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                        className="object-cover"
                                     />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                                            <h3 className="text-lg font-semibold mb-2">{rec.title}</h3>
-                                            <p className="text-sm text-yellow-400">
-                                                Rating: {rec.vote_average ? rec.vote_average.toFixed(1) : 'N/A'} / 10
-                                            </p>
-                                        </div>
-                                    </div>
                                 </div>
                             ))}
                         </div>
