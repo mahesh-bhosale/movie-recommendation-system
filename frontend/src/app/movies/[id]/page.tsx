@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import Image from 'next/image';
@@ -118,7 +118,32 @@ export default function MovieDetailsPage() {
     const [isRating, setIsRating] = useState(false);
     const [ratingError, setRatingError] = useState<string | null>(null);
 
-    const storeMovieHistory = async (tmdbId: number) => {
+    const fetchUserRating = useCallback(async () => {
+        if (!isAuthenticated) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/${id}/rating`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data?.rating !== null) {
+                setUserRating(response.data.rating);
+            }
+        } catch (err) {
+            console.error('Error fetching user rating:', err);
+        }
+    }, [id, isAuthenticated]);
+
+    const storeMovieHistory = useCallback(async (tmdbId: number) => {
         if (!isAuthenticated) return;
 
         try {
@@ -147,9 +172,9 @@ export default function MovieDetailsPage() {
                 router.push('/login');
             }
         }
-    };
+    }, [isAuthenticated, router]);
 
-    const handleGetRecommendations = async () => {
+    const handleGetRecommendations = useCallback(async () => {
         if (!isAuthenticated) {
             router.push('/login');
             return;
@@ -233,7 +258,7 @@ export default function MovieDetailsPage() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [isAuthenticated, movie, router, storeMovieHistory]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -261,44 +286,19 @@ export default function MovieDetailsPage() {
         };
 
         fetchMovieDetails();
-    }, [id, isAuthenticated]);
+    }, [id, isAuthenticated, handleGetRecommendations, storeMovieHistory]);
 
     useEffect(() => {
         if (isAuthenticated) {
             fetchUserRating();
         }
-    }, [id, isAuthenticated]);
+    }, [id, isAuthenticated, fetchUserRating]);
 
     const getOfficialTrailer = () => {
         if (!movie?.videos?.results) return null;
         return movie.videos.results.find(
             video => video.type === 'Trailer' && video.official && video.site === 'YouTube'
         );
-    };
-
-    const fetchUserRating = async () => {
-        if (!isAuthenticated) return;
-
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-
-            const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/${id}/rating`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (response.data?.rating !== null) {
-                setUserRating(response.data.rating);
-            }
-        } catch (err) {
-            console.error('Error fetching user rating:', err);
-        }
     };
 
     const handleRateMovie = async (rating: number) => {

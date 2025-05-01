@@ -238,15 +238,7 @@ export default function HomePage() {
                                     key={movie.id}
                                     movie={movie}
                                     onClick={() => router.push(`/movie/${movie.id}`)}
-                                >
-                                    <Image
-                                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                                        alt={movie.title}
-                                        width={500}
-                                        height={750}
-                                        className="w-full h-full object-cover rounded-lg"
-                                    />
-                                </MovieCard>
+                                />
                             )
                         )}
 
@@ -259,15 +251,7 @@ export default function HomePage() {
                                     key={movie.id}
                                     movie={movie}
                                     onClick={() => router.push(`/movie/${movie.id}`)}
-                                >
-                                    <Image
-                                        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-                                        alt={movie.title}
-                                        width={500}
-                                        height={750}
-                                        className="w-full h-full object-cover rounded-lg"
-                                    />
-                                </MovieCard>
+                                />
                             ),
                             'Start watching movies to get personalized recommendations!'
                         )}
