@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
 import Image from 'next/image';
@@ -118,32 +118,7 @@ export default function MovieDetailsPage() {
     const [isRating, setIsRating] = useState(false);
     const [ratingError, setRatingError] = useState<string | null>(null);
 
-    const fetchUserRating = useCallback(async () => {
-        if (!isAuthenticated) return;
-
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return;
-
-            const response = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/${id}/rating`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            if (response.data?.rating !== null) {
-                setUserRating(response.data.rating);
-            }
-        } catch (err) {
-            console.error('Error fetching user rating:', err);
-        }
-    }, [id, isAuthenticated]);
-
-    const storeMovieHistory = useCallback(async (tmdbId: number) => {
+    const storeMovieHistory = async (tmdbId: number) => {
         if (!isAuthenticated) return;
 
         try {
@@ -153,6 +128,7 @@ export default function MovieDetailsPage() {
                 return;
             }
 
+            
             await axios.post(
                 `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
                 { tmdb_movie_id: tmdbId },
@@ -162,19 +138,47 @@ export default function MovieDetailsPage() {
                         'Content-Type': 'application/json'
                     }
                 }
-            );
+            );            
         } catch (err) {
             console.error('Error storing movie history:', err);
-            if (axios.isAxiosError(err) && err.response?.status === 401) {
-                // Handle unauthorized error
-                localStorage.removeItem('token');
-                setIsAuthenticated(false);
-                router.push('/login');
+        if (axios.isAxiosError(err) && err.response?.status === 401) {
+                    // Handle unauthorized error
+                    localStorage.removeItem('token');
+                    setIsAuthenticated(false);
+                    router.push('/login');
+                }
             }
-        }
-    }, [isAuthenticated, router]);
+};
 
-    const handleGetRecommendations = useCallback(async () => {
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        setIsAuthenticated(!!token);
+    }, []);
+
+    useEffect(() => {
+        const fetchMovieDetails = async () => {
+            try {
+                const response = await axios.get(
+                    `https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&append_to_response=credits,videos,production_companies`
+                );
+                setMovie(response.data);
+                if (isAuthenticated && response.data?.title) {
+                    await storeMovieHistory(Number(id));
+                    // Only get recommendations if we have the movie title
+                    await handleGetRecommendations();
+                }
+            } catch (err) {
+                console.error('Error fetching movie details:', err);
+                setError('Failed to load movie details');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchMovieDetails();
+    }, [id, isAuthenticated]);
+
+    const handleGetRecommendations = async () => {
         if (!isAuthenticated) {
             router.push('/login');
             return;
@@ -258,47 +262,38 @@ export default function MovieDetailsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [isAuthenticated, movie, router, storeMovieHistory]);
-
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        setIsAuthenticated(!!token);
-    }, []);
-
-    useEffect(() => {
-        const fetchMovieDetails = async () => {
-            try {
-                const response = await axios.get(
-                    `https://api.themoviedb.org/3/movie/${id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&append_to_response=credits,videos,production_companies`
-                );
-                setMovie(response.data);
-                if (isAuthenticated && response.data?.title) {
-                    await storeMovieHistory(Number(id));
-                    // Only get recommendations if we have the movie title
-                    await handleGetRecommendations();
-                }
-            } catch (err) {
-                console.error('Error fetching movie details:', err);
-                setError('Failed to load movie details');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchMovieDetails();
-    }, [id, isAuthenticated, handleGetRecommendations, storeMovieHistory]);
-
-    useEffect(() => {
-        if (isAuthenticated) {
-            fetchUserRating();
-        }
-    }, [id, isAuthenticated, fetchUserRating]);
+    };
 
     const getOfficialTrailer = () => {
         if (!movie?.videos?.results) return null;
         return movie.videos.results.find(
             video => video.type === 'Trailer' && video.official && video.site === 'YouTube'
         );
+    };
+
+    const fetchUserRating = async () => {
+        if (!isAuthenticated) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            const response = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/movies/${id}/rating`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (response.data?.rating !== null) {
+                setUserRating(response.data.rating);
+            }
+        } catch (err) {
+            console.error('Error fetching user rating:', err);
+        }
     };
 
     const handleRateMovie = async (rating: number) => {
@@ -336,6 +331,12 @@ export default function MovieDetailsPage() {
             setIsRating(false);
         }
     };
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchUserRating();
+        }
+    }, [id, isAuthenticated]);
 
     if (isLoading) {
         return (
@@ -544,10 +545,18 @@ export default function MovieDetailsPage() {
                                 >
                                     <Image
                                         src={`https://image.tmdb.org/t/p/w500${rec.poster_path}`}
-                                        alt={rec.title}
+                                        alt={`Movie poster for ${rec.title}`}
                                         fill
-                                        className="object-cover"
+                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                                            <h3 className="text-lg font-semibold mb-2">{rec.title}</h3>
+                                            <p className="text-sm text-yellow-400">
+                                                Rating: {rec.vote_average ? rec.vote_average.toFixed(1) : 'N/A'} / 10
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                         </div>
