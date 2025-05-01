@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.routes import user, recommend, hybrid
+from app.routes import user, recommend
 import uvicorn
 import os
 import logging
@@ -26,7 +26,7 @@ logger.info(f"PYTHONPATH: {os.environ.get('PYTHONPATH', 'Not set')}")
 
 app = FastAPI(title="Movie Recommendation System")
 
-# Add CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,13 +35,12 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-# Register routes
-app.include_router(user.router, prefix="/auth", tags=["Auth"])
-app.include_router(recommend.router, prefix="/recommend", tags=["Recommendation"])
-app.include_router(hybrid.router, prefix="/hybrid", tags=["Hybrid"])
+# Include routers
+app.include_router(user.router, prefix="/api/users", tags=["users"])
+app.include_router(recommend.router, prefix="/api/recommend", tags=["recommendations"])
 
 @app.get("/")
-def root():
+async def root():
     return {"message": "Welcome to the Movie Recommendation API"}
 
 @app.get("/health")
