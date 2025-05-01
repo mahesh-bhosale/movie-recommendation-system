@@ -237,7 +237,7 @@ export default function HomePage() {
                                 <MovieCard
                                     key={movie.id}
                                     movie={movie}
-                                    onClick={() => router.push(`/movie/${movie.id}`)}
+                                    onClick={() => router.push(`/movies/${movie.id}`)}
                                 />
                             )
                         )}
@@ -250,7 +250,7 @@ export default function HomePage() {
                                 <MovieCard
                                     key={movie.id}
                                     movie={movie}
-                                    onClick={() => router.push(`/movie/${movie.id}`)}
+                                    onClick={() => router.push(`/movies/${movie.id}`)}
                                 />
                             ),
                             'Start watching movies to get personalized recommendations!'

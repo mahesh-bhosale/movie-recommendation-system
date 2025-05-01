@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { useAuthStore } from '@/store/auth';
 import { loginUser } from '@/lib/api';
 import { ApiError } from '@/types/api';
+import Image from 'next/image';
 
 const LottieAnimation = dynamic(() => import('@/components/ui/loginDynamicLottie'), {
     ssr: false,
@@ -78,7 +79,15 @@ export default function Login() {
             <div className='bg-[rgb(250,250,250)] max-md:w-full lg:w-[40%] h-screen text-black'>
                 <div className='flex flex-col h-full justify-around items-center'>
                     <div className='w-full md:w-3/4 p-10 flex flex-col items-center'>
-                        <img src='/icons/logo.png' className='w-16 h-auto my-[6vh] brightness-0' />
+                        <div className="flex items-center justify-center mb-8">
+                            <Image
+                                src="/logo.png"
+                                alt="MovieRec Logo"
+                                width={150}
+                                height={150}
+                                className="w-32 h-32 object-contain"
+                            />
+                        </div>
                         <h1 className='text-4xl font-semibold'>Welcome back</h1>
                         <p className='mt-2 text-gray-500'>Please enter your details</p>
                         <form className='flex flex-col w-full mt-12' onSubmit={loginHandler}>

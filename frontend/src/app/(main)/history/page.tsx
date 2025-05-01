@@ -9,17 +9,8 @@ import MovieCard from '@/components/ui/MovieCard';
 interface Movie {
     id: number;
     title: string;
-    overview: string;
     poster_path: string;
     vote_average: number;
-    history_id?: number;
-}
-
-interface HistoryItem {
-    id: number;
-    title: string;
-    timestamp: string;
-    poster_path: string;
 }
 
 export default function HistoryPage() {
@@ -77,10 +68,8 @@ export default function HistoryPage() {
                 const movies: Movie[] = response.data.map(item => ({
                     id: item.id,
                     title: item.title,
-                    overview: '', // We don't have this in the history response
                     poster_path: item.poster_path.replace('https://image.tmdb.org/t/p/w500', ''),
-                    vote_average: 0, // We don't have this in the history response
-                    history_id: item.id
+                    vote_average: 0 // We don't have this in the history response
                 }));
 
                 console.log('Processed movies:', movies);
@@ -182,8 +171,9 @@ export default function HistoryPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                         {history.map((movie) => (
                             <MovieCard 
-                                key={movie.history_id}
+                                key={movie.id}
                                 movie={movie}
+                                onClick={() => router.push(`/movies/${movie.id}`)}
                             />
                         ))}
                     </div>

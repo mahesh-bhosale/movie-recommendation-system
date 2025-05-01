@@ -213,6 +213,7 @@ export default function SearchPage() {
                                 <MovieCard 
                                     key={movie.id}
                                     movie={movie}
+                                    onClick={() => router.push(`/movies/${movie.id}`)}
                                 />
                             ))}
                         </div>
