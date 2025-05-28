@@ -14,9 +14,26 @@ interface Movie {
     vote_average: number;
 }
 
+interface SearchMovieResponse {
+    adult: boolean;
+    backdrop_path: string;
+    genre_ids: number[];
+    id: number;
+    original_language: string;
+    original_title: string;
+    overview: string;
+    popularity: number;
+    poster_path: string;
+    release_date: string;
+    title: string;
+    video: boolean;
+    vote_average: number;
+    vote_count: number;
+}
+
 export default function SearchPage() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [recommendations, setRecommendations] = useState<Movie[]>([]);
+    const [searchResults, setSearchResults] = useState<Movie[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const token = useAuthStore(state => state.token);
@@ -29,37 +46,6 @@ export default function SearchPage() {
         }
     }, [isInitialized, token, router]);
 
-    const addToHistory = async (movie: Movie) => {
-        try {
-            if (!token) {
-                console.error('No token available');
-                router.push('/login');
-                return;
-            }
-
-            console.log('Adding movie to history:', movie.title);
-            await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/users/history`,
-                {
-                    tmdb_movie_id: movie.id
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-            console.log('Successfully added to history:', movie.title);
-        } catch (error) {
-            console.error('Error adding to history:', error);
-            if (axios.isAxiosError(error) && error.response?.status === 401) {
-                useAuthStore.getState().clearAuth();
-                router.push('/login');
-            }
-        }
-    };
-
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!searchQuery.trim()) return;
@@ -67,77 +53,28 @@ export default function SearchPage() {
         try {
             setLoading(true);
             setError(null);
-            setRecommendations([]); // Clear previous recommendations
+            setSearchResults([]); // Clear previous results
 
-            const recommendationsResponse = await axios.get(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/recommend/`,
+            const searchResponse = await axios.get(
+                `${process.env.NEXT_PUBLIC_API_URL}/api/users/search/movie`,
                 {
-                  params: { movie: searchQuery },
-                  headers: {
-                    Authorization: `Bearer ${token}`
-                  }
-                }
-              );
-
-            if (recommendationsResponse.data.recommendations) {
-                // First, add the searched movie to history
-                const searchedMovieResponse = await axios.get(
-                    `${process.env.NEXT_PUBLIC_API_URL}/api/users/search/movie`,
-                    {
-                        params: { query: searchQuery },
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
+                    params: { query: searchQuery },
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
                     }
-                );
-
-                if (!searchedMovieResponse.data || !searchedMovieResponse.data.results) {
-                    throw new Error('Invalid response format from search endpoint');
                 }
+            );
 
-                if (searchedMovieResponse.data.results[0]) {
-                    const searchedMovie = searchedMovieResponse.data.results[0];
-                    await addToHistory({
-                        id: searchedMovie.id,
-                        title: searchedMovie.title,
-                        overview: searchedMovie.overview,
-                        poster_path: searchedMovie.poster_path,
-                        vote_average: searchedMovie.vote_average
-                    });
-                }
-
-                const moviePromises = recommendationsResponse.data.recommendations.map(async (title: string) => {
-                    try {
-                        const movieResponse = await axios.get(
-                            `${process.env.NEXT_PUBLIC_API_URL}/api/users/search/movie`,
-                            {
-                                params: { query: title },
-                                // headers: {
-                                //     'Authorization': `Bearer ${token}`,
-                                //     'Content-Type': 'application/json'
-                                // }
-                            }
-                        );
-                        const movie = movieResponse.data.results[0];
-                        if (movie) {
-                            return {
-                                id: movie.id,
-                                title: movie.title,
-                                overview: movie.overview,
-                                poster_path: movie.poster_path,
-                                vote_average: movie.vote_average
-                            };
-                        }
-                        return null;
-                    } catch (error) {
-                        console.error(`Error fetching details for ${title}:`, error);
-                        return null;
-                    }
-                });
-
-                const movies = (await Promise.all(moviePromises)).filter((movie): movie is Movie => movie !== null);
-                setRecommendations(movies);
+            if (searchResponse.data && searchResponse.data.results) {
+                const movies = searchResponse.data.results.map((movie: SearchMovieResponse) => ({
+                    id: movie.id,
+                    title: movie.title,
+                    overview: movie.overview,
+                    poster_path: movie.poster_path,
+                    vote_average: movie.vote_average
+                }));
+                setSearchResults(movies);
             }
         } catch (error) {
             console.error('Error in search:', error);
@@ -200,16 +137,15 @@ export default function SearchPage() {
                 {loading && (
                     <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                        <p className="text-gray-400">Searching for recommendations...</p>
+                        <p className="text-gray-400">Searching for movies...</p>
                     </div>
                 )}
 
-                {!loading && recommendations.length > 0 && (
+                {!loading && searchResults.length > 0 && (
                     <section>
-                        <h2 className="text-2xl font-semibold mb-6">Recommendations</h2>
+                        <h2 className="text-2xl font-semibold mb-6">Search Results</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-      
-                            {recommendations.map((movie) => (
+                            {searchResults.map((movie) => (
                                 <MovieCard 
                                     key={movie.id}
                                     movie={movie}
@@ -220,9 +156,9 @@ export default function SearchPage() {
                     </section>
                 )}
 
-                {!loading && recommendations.length === 0 && searchQuery && (
+                {!loading && searchResults.length === 0 && searchQuery && (
                     <p className="text-gray-400 text-center py-8">
-                        No recommendations found. Try searching for a different movie.
+                        No movies found. Try searching for a different movie.
                     </p>
                 )}
             </div>
