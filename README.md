@@ -5,6 +5,14 @@
 This project is a **Content-Based Movie Recommendation System** that suggests movies to users based on their preferences using metadata like genres, keywords, and descriptions. It leverages machine learning techniques and an interactive frontend to deliver personalized movie recommendations.
 
 ---
+## 🎥 Project Demo
+
+https://github.com/user-attachments/assets/e6b37123-8492-4a73-bc9c-b554dd1bd8ff
+
+
+
+---
+---
 ## 🚀 Live Demo
 
 [![Visit Live Site](https://img.shields.io/badge/Live%20Demo-Visit%20Now-blue?style=for-the-badge)](https://movie-recommendation-system-nine-beta.vercel.app)
