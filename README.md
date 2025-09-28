@@ -6,8 +6,10 @@ This project is a **Content-Based Movie Recommendation System** that suggests mo
 
 ---
 ## 🎥 Project Demo
+[![MovieRec Demo](https://img.youtube.com/vi/e1pU-sygGWU/0.jpg)](https://youtu.be/e1pU-sygGWU)
 
-https://github.com/user-attachments/assets/e6b37123-8492-4a73-bc9c-b554dd1bd8ff
+# Watch the full project demo on YouTube:
+[MovieRec – Full Project Demo | Movie Recommendation System](https://youtu.be/e1pU-sygGWU)
 
 
 
